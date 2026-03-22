@@ -9,6 +9,7 @@ import {
   toInputDateValue,
   dateValueToDayIndex,
 } from "./scenarios.mjs";
+import { enrichScenarioWithRemoteData } from "./remoteSensing.mjs";
 import {
   buildNarrative,
   buildReportPayload,
@@ -25,6 +26,7 @@ const budgetValue = document.querySelector("#budgetValue");
 const powerModeSelect = document.querySelector("#powerModeSelect");
 const downlinkSelect = document.querySelector("#downlinkSelect");
 const runButton = document.querySelector("#runButton");
+const sceneRunButton = document.querySelector("#sceneRunButton");
 const exportButton = document.querySelector("#exportButton");
 const resetMemoryButton = document.querySelector("#resetMemoryButton");
 
@@ -96,6 +98,11 @@ const RULE_ACTION_LABELS = {
 };
 
 let latestReport = null;
+let latestObservedScenario = null;
+let refreshToken = 0;
+let previewTimer = null;
+
+const sceneCache = new Map();
 
 function readMemory() {
   try {
@@ -154,8 +161,9 @@ function currentObservation() {
   return observationFromParts(Number(dateSlider.value), Number(hourSlider.value));
 }
 
-function currentScenario() {
-  return materializeScenarioAt(baseScenario().id, currentObservation());
+function currentSceneKey() {
+  const observation = currentObservation();
+  return `${baseScenario().id}:${toInputDateValue(observation)}:${String(observation.getHours()).padStart(2, "0")}`;
 }
 
 function currentOptions() {
@@ -166,16 +174,29 @@ function currentOptions() {
   };
 }
 
-function syncTimelineLabels() {
-  const scenario = currentScenario();
+function reportMatchesScenario(scenario) {
+  return (
+    latestReport &&
+    latestReport.scenario.id === scenario.id &&
+    latestReport.scenario.observation.iso === scenario.observation.iso
+  );
+}
+
+function renderTimelineStatus(snapshot = null) {
   const observation = currentObservation();
   timelineLabel.textContent = formatObservationLabel(observation);
-  timelineBadge.textContent = `云量 ${formatPercent(scenario.cloudCover)} · 质量 ${formatPercent(
-    scenario.radiometricQuality
-  )}`;
   timelineCurrentLabel.textContent = formatShortDate(observation);
   dateInput.value = toInputDateValue(observation);
   hourValue.textContent = `${String(observation.getHours()).padStart(2, "0")}:00`;
+
+  if (snapshot) {
+    timelineBadge.textContent = `云量 ${formatPercent(snapshot.cloudCover)} · 质量 ${formatPercent(
+      snapshot.radiometricQuality
+    )}`;
+    return;
+  }
+
+  timelineBadge.textContent = "正在加载真实遥感影像与异常提取结果";
 }
 
 function seedControls() {
@@ -198,7 +219,7 @@ function seedControls() {
   timelineStartLabel.textContent = formatShortDate(timeline.start);
   timelineEndLabel.textContent = formatShortDate(timeline.end);
 
-  syncTimelineLabels();
+  renderTimelineStatus();
 }
 
 function renderMissionBrief(scenario, options) {
@@ -213,6 +234,11 @@ function renderMissionBrief(scenario, options) {
         <span>观测时刻</span>
         <strong>${scenario.observation.label}</strong>
         <p>${scenario.observation.summary}</p>
+      </div>
+      <div class="brief-card">
+        <span>底图与工具</span>
+        <strong>${scenario.imagery.sourceLabel}</strong>
+        <p>${scenario.analysis.sourceLabel}</p>
       </div>
       <div class="brief-card">
         <span>场景压力</span>
@@ -233,6 +259,30 @@ function renderMissionBrief(scenario, options) {
         <strong>${scenario.rois.length} 个候选区域</strong>
         <p>${scenario.sensor} · ${typeLabel(scenario.type)} · 异常密度 ${formatPercent(
           scenario.anomalyDensity
+        )}</p>
+      </div>
+    </div>
+  `;
+}
+
+function renderMissionBriefLoading(snapshot, options) {
+  missionBrief.innerHTML = `
+    <div class="mission-grid">
+      <div class="brief-card">
+        <span>任务目标</span>
+        <strong>${snapshot.title}</strong>
+        <p>${snapshot.mission}</p>
+      </div>
+      <div class="brief-card">
+        <span>观测时刻</span>
+        <strong>${snapshot.observation.label}</strong>
+        <p>正在调用官方遥感图层，请稍候。</p>
+      </div>
+      <div class="brief-card">
+        <span>当前约束</span>
+        <strong>${options.budgetMin} 分钟时延预算</strong>
+        <p>${powerModeLabel(options.powerMode)}功耗模式 · ${downlinkLabel(
+          options.downlinkPolicy
         )}</p>
       </div>
     </div>
@@ -309,6 +359,16 @@ async function renderLogs(logs) {
   }
 }
 
+function renderSceneLoading(snapshot) {
+  sceneMap.innerHTML = `
+    <div class="scene-loading-card">
+      <strong>正在加载真实遥感影像</strong>
+      <p>${snapshot.observation.label}</p>
+      <p>正在从官方图层获取底图，并基于 AOD 产品提取异常区域。</p>
+    </div>
+  `;
+}
+
 function renderSceneMap(scenario, result = null) {
   const showAnnotations = overlayToggle.checked;
   const selectedIds = new Set(result?.state.processedRois.map((roi) => roi.id) ?? []);
@@ -359,6 +419,16 @@ function renderSceneMap(scenario, result = null) {
         <span>当前观测</span>
         <strong>${scenario.observation.label}</strong>
         <p>${scenario.observation.summary}</p>
+      </div>
+      <div class="scene-meta-card">
+        <span>底图来源</span>
+        <strong>${scenario.imagery.sourceLabel}</strong>
+        <p>${scenario.imagery.note}</p>
+      </div>
+      <div class="scene-meta-card">
+        <span>异常提取</span>
+        <strong>${scenario.analysis.sourceLabel}</strong>
+        <p>${scenario.analysis.summary}</p>
       </div>
       <div class="scene-meta-card">
         <span>标记模式</span>
@@ -532,15 +602,10 @@ function renderPlanNotes(plan) {
   workflowPlan.prepend(noteCard);
 }
 
-function invalidateRunOutputs() {
-  const scenario = currentScenario();
-  const options = currentOptions();
-
+function clearResultPanels() {
   latestReport = null;
-  renderMissionBrief(scenario, options);
   workflowPlan.innerHTML = '<div class="empty-state">点击“开始演示”后，这里会生成对应的处理流程。</div>';
   executionLog.innerHTML = '<div class="empty-state">运行后，这里会显示逐步处理记录。</div>';
-  renderSceneMap(scenario);
   metricsCards.innerHTML = '<div class="empty-state">运行完成后，这里会展示结果指标。</div>';
   compareTable.innerHTML = "";
   compareExplain.innerHTML =
@@ -548,29 +613,94 @@ function invalidateRunOutputs() {
   narrativePanel.innerHTML = '<div class="empty-state">运行完成后，这里会生成一段便于汇报的说明文字。</div>';
 }
 
+function setRunButtonsBusy(busy) {
+  runButton.disabled = busy;
+  sceneRunButton.disabled = busy;
+  runButton.textContent = busy ? "场景加载中..." : "开始演示";
+  sceneRunButton.textContent = busy ? "正在准备..." : "用当前时刻开始演示";
+}
+
+function cacheKeyForSnapshot(snapshot) {
+  return `${snapshot.id}:${snapshot.observation.dateValue}:${String(snapshot.observation.hour).padStart(2, "0")}`;
+}
+
+async function getObservedScenario(snapshot = null) {
+  const baseSnapshot = snapshot ?? materializeScenarioAt(baseScenario().id, currentObservation());
+  const key = cacheKeyForSnapshot(baseSnapshot);
+
+  if (!sceneCache.has(key)) {
+    sceneCache.set(key, enrichScenarioWithRemoteData(baseSnapshot));
+  }
+
+  return sceneCache.get(key);
+}
+
+async function refreshScenarioPreview() {
+  const token = ++refreshToken;
+  const snapshot = materializeScenarioAt(baseScenario().id, currentObservation());
+  latestObservedScenario = null;
+
+  renderTimelineStatus();
+  renderMissionBriefLoading(snapshot, currentOptions());
+  renderSceneLoading(snapshot);
+  setRunButtonsBusy(true);
+
+  try {
+    const scenario = await getObservedScenario(snapshot);
+    if (token !== refreshToken) {
+      return;
+    }
+
+    latestObservedScenario = scenario;
+    renderTimelineStatus(scenario);
+    renderMissionBrief(scenario, currentOptions());
+    renderSceneMap(scenario);
+  } finally {
+    if (token === refreshToken) {
+      setRunButtonsBusy(false);
+    }
+  }
+}
+
+function scheduleScenarioPreview() {
+  window.clearTimeout(previewTimer);
+  previewTimer = window.setTimeout(() => {
+    void refreshScenarioPreview();
+  }, 220);
+}
+
 async function runMission() {
-  const scenario = currentScenario();
-  const options = currentOptions();
-  const memory = readMemory();
+  setRunButtonsBusy(true);
 
-  renderMissionBrief(scenario, options);
-  renderSceneMap(scenario);
-  executionLog.innerHTML = '<div class="empty-state">正在执行本次任务，处理记录会按步骤依次出现。</div>';
+  try {
+    const scenario =
+      latestObservedScenario ?? (await getObservedScenario(materializeScenarioAt(baseScenario().id, currentObservation())));
+    latestObservedScenario = scenario;
 
-  const agentRun = runAgentMission(scenario, options, memory);
-  const baselineRun = runBaselineMission(scenario, options);
+    const options = currentOptions();
+    const memory = readMemory();
 
-  writeMemory(agentRun.memory);
+    renderMissionBrief(scenario, options);
+    renderSceneMap(scenario);
+    executionLog.innerHTML = '<div class="empty-state">正在执行本次任务，处理记录会按步骤依次出现。</div>';
 
-  renderWorkflowPlan(agentRun.plan, agentRun.result);
-  renderPlanNotes(agentRun.plan);
-  await renderLogs(agentRun.result.logs);
-  renderSceneMap(scenario, agentRun.result);
-  renderMetrics(agentRun, baselineRun);
-  renderNarrative(buildNarrative(scenario, agentRun, baselineRun));
-  renderMemory(agentRun.memory);
+    const agentRun = runAgentMission(scenario, options, memory);
+    const baselineRun = runBaselineMission(scenario, options);
 
-  latestReport = buildReportPayload(scenario, options, agentRun, baselineRun);
+    writeMemory(agentRun.memory);
+
+    renderWorkflowPlan(agentRun.plan, agentRun.result);
+    renderPlanNotes(agentRun.plan);
+    await renderLogs(agentRun.result.logs);
+    renderSceneMap(scenario, agentRun.result);
+    renderMetrics(agentRun, baselineRun);
+    renderNarrative(buildNarrative(scenario, agentRun, baselineRun));
+    renderMemory(agentRun.memory);
+
+    latestReport = buildReportPayload(scenario, options, agentRun, baselineRun);
+  } finally {
+    setRunButtonsBusy(false);
+  }
 }
 
 function exportReport() {
@@ -603,51 +733,55 @@ function handleScenarioChange() {
   powerModeSelect.value = preset.powerMode;
   downlinkSelect.value = preset.downlinkPolicy;
   budgetValue.textContent = `${preset.budgetMin} 分钟`;
-  syncTimelineLabels();
-  invalidateRunOutputs();
+  clearResultPanels();
+  scheduleScenarioPreview();
 }
 
 function handleDateSliderChange() {
-  syncTimelineLabels();
-  invalidateRunOutputs();
+  renderTimelineStatus();
+  clearResultPanels();
+  scheduleScenarioPreview();
 }
 
 function handleDateInputChange() {
   dateSlider.value = String(dateValueToDayIndex(dateInput.value));
-  syncTimelineLabels();
-  invalidateRunOutputs();
+  renderTimelineStatus();
+  clearResultPanels();
+  scheduleScenarioPreview();
 }
 
 function handleHourChange() {
-  syncTimelineLabels();
-  invalidateRunOutputs();
+  renderTimelineStatus();
+  clearResultPanels();
+  scheduleScenarioPreview();
 }
 
 function handleOptionChange() {
   budgetValue.textContent = `${budgetInput.value} 分钟`;
-  invalidateRunOutputs();
+  clearResultPanels();
+  if (latestObservedScenario) {
+    renderMissionBrief(latestObservedScenario, currentOptions());
+  }
 }
 
 function handleOverlayToggle() {
-  const scenario = currentScenario();
-
-  if (
-    latestReport &&
-    latestReport.scenario.id === scenario.id &&
-    latestReport.scenario.observation.iso === scenario.observation.iso
-  ) {
-    renderSceneMap(scenario, latestReport.agentResult);
+  if (!latestObservedScenario) {
     return;
   }
 
-  renderSceneMap(scenario);
+  const result = reportMatchesScenario(latestObservedScenario)
+    ? latestReport.agentResult
+    : null;
+
+  renderSceneMap(latestObservedScenario, result);
 }
 
 function bootstrap() {
   renderScenarioSelect();
   seedControls();
-  invalidateRunOutputs();
+  clearResultPanels();
   renderMemory(readMemory());
+  void refreshScenarioPreview();
 
   scenarioSelect.addEventListener("change", handleScenarioChange);
   budgetInput.addEventListener("input", handleOptionChange);
@@ -657,7 +791,12 @@ function bootstrap() {
   dateSlider.addEventListener("input", handleDateSliderChange);
   dateInput.addEventListener("change", handleDateInputChange);
   hourSlider.addEventListener("input", handleHourChange);
-  runButton.addEventListener("click", runMission);
+  runButton.addEventListener("click", () => {
+    void runMission();
+  });
+  sceneRunButton.addEventListener("click", () => {
+    void runMission();
+  });
   exportButton.addEventListener("click", exportReport);
   resetMemoryButton.addEventListener("click", resetMemory);
 }
