@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>星上大气异常自适应反演原型</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <div class="backdrop backdrop-one"></div>
+      <div class="backdrop backdrop-two"></div>
+
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">晏星Agent</p>
+          <h1>星上大气异常自适应反演原型</h1>
+          <p class="hero-text">
+            这个原型展示的是一类面向星上大气异常监测与及时反演的智能体：它能够在算力、时延和下传受限的条件下，主动理解任务目标，自主选择处理流程，在执行受阻时动态调整策略，并把有限资源优先投入最关键的异常区域，从而为复杂科学问题提供一条可落地、可扩展的自动化求解路径。
+          </p>
+        </div>
+        <div class="hero-stats">
+          <div class="stat-card">
+            <span>核心思路</span>
+            <strong>工作流知识驱动</strong>
+          </div>
+          <div class="stat-card">
+            <span>演示重点</span>
+            <strong>预算感知与动态修复</strong>
+          </div>
+          <div class="stat-card">
+            <span>应用方向</span>
+            <strong>星上及时反演</strong>
+          </div>
+        </div>
+      </header>
+
+      <main class="main-layout">
+        <section class="panel control-panel">
+          <div class="panel-head">
+            <h2>任务设置</h2>
+            <p>选择场景和约束条件，生成一次完整的处理流程。</p>
+          </div>
+
+          <div class="form-grid">
+            <label class="field">
+              <span>场景</span>
+              <select id="scenarioSelect"></select>
+            </label>
+
+            <label class="field">
+              <span>时延预算</span>
+              <div class="slider-wrap">
+                <input id="budgetInput" type="range" min="4" max="10" step="1" />
+                <strong id="budgetValue"></strong>
+              </div>
+            </label>
+
+            <label class="field">
+              <span>功耗模式</span>
+              <select id="powerModeSelect">
+                <option value="constrained">受限</option>
+                <option value="balanced">均衡</option>
+                <option value="burst">冲刺</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>下传策略</span>
+              <select id="downlinkSelect">
+                <option value="focused">聚焦重点区域</option>
+                <option value="balanced">兼顾范围与重点</option>
+                <option value="full">保留更多全局信息</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="action-row">
+            <button id="runButton" class="primary-button">开始演示</button>
+            <button id="exportButton" class="secondary-button">导出报告</button>
+            <button id="resetMemoryButton" class="ghost-button">清空经验</button>
+          </div>
+        </section>
+
+        <section class="panel mission-panel">
+          <div class="panel-head">
+            <h2>任务概览</h2>
+            <p>汇总当前场景、风险点和星上资源约束。</p>
+          </div>
+          <div id="missionBrief" class="mission-brief"></div>
+        </section>
+
+        <section class="panel workflow-panel">
+          <div class="panel-head">
+            <h2>处理流程</h2>
+            <p>先看规划方案，再看执行中发生了哪些调整。</p>
+          </div>
+          <div id="workflowPlan" class="workflow-plan"></div>
+        </section>
+
+        <section class="panel log-panel">
+          <div class="panel-head">
+            <h2>执行记录</h2>
+            <p>逐步展示工具调用、预算消耗和修复动作。</p>
+          </div>
+          <div id="executionLog" class="execution-log"></div>
+        </section>
+
+        <section class="panel map-panel">
+          <div class="panel-head">
+            <h2>场景示意</h2>
+            <p>显示异常区域分布和本次真正进入处理的重点区域。</p>
+          </div>
+          <div id="sceneMap" class="scene-map"></div>
+        </section>
+
+        <section class="panel metric-panel">
+          <div class="panel-head">
+            <h2>结果对比</h2>
+            <p>把时延、功耗、结果质量和任务完成度放在一起综合比较。</p>
+          </div>
+          <div id="metricsCards" class="metrics-grid"></div>
+          <div id="compareTable" class="compare-table"></div>
+          <div id="compareExplain" class="compare-explain"></div>
+        </section>
+
+        <section class="panel narrative-panel">
+          <div class="panel-head">
+            <h2>运行解读</h2>
+            <p>把这次处理过程转换成方便汇报的说明文字。</p>
+          </div>
+          <div id="narrativePanel" class="narrative-content"></div>
+        </section>
+
+        <section class="panel memory-panel">
+          <div class="panel-head">
+            <h2>经验记录</h2>
+            <p>记录失败类型和修复动作，供后续任务复用。</p>
+          </div>
+          <div id="memoryPanel" class="memory-content"></div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./src/app.mjs"></script>
+  </body>
+</html>

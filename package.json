@@ -1,0 +1,17 @@
+{
+  "name": "yanxing-agent-demo",
+  "private": true,
+  "description": "Shareable web demo for the Yan Xing atmospheric retrieval agent prototype",
+  "scripts": {
+    "start": "node server.js",
+    "share": "node share.js",
+    "build:pages": "node prepare-pages.js",
+    "deploy:pages": "npm run build:pages && gh-pages -d pages-dist -t true"
+  },
+  "dependencies": {
+    "localtunnel": "^2.0.2"
+  },
+  "devDependencies": {
+    "gh-pages": "^6.3.0"
+  }
+}
