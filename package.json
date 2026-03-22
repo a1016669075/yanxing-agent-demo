@@ -6,7 +6,7 @@
     "start": "node server.js",
     "share": "node share.js",
     "build:pages": "node prepare-pages.js",
-    "deploy:pages": "npm run build:pages && gh-pages -d pages-dist -t true"
+    "deploy:pages": "npm run build:pages && gh-pages -d pages-dist -t"
   },
   "dependencies": {
     "localtunnel": "^2.0.2"
