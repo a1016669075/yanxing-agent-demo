@@ -1,4 +1,11 @@
 const GIBS_WMS_URL = "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi";
+const DEFAULT_DAILY_LAYERS = [
+  "VIIRS_NOAA21_CorrectedReflectance_TrueColor",
+  "VIIRS_NOAA20_CorrectedReflectance_TrueColor",
+  "VIIRS_SNPP_CorrectedReflectance_TrueColor",
+  "MODIS_Terra_CorrectedReflectance_TrueColor",
+];
+const STATIC_PREDICTIONS_URL = new URL("../assets/model-predictions/predictions.json", import.meta.url);
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -15,12 +22,6 @@ function pad2(value) {
 
 function dayString(date) {
   return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
-}
-
-function rapidTimeString(date) {
-  const utc = new Date(date);
-  utc.setUTCMinutes(0, 0, 0);
-  return utc.toISOString().replace(".000Z", "Z");
 }
 
 function buildGetMapUrl({ layer, bbox, width, height, time, format, transparent }) {
@@ -114,6 +115,7 @@ async function loadImageData(url, width, height) {
     return {
       imageData: context.getImageData(0, 0, width, height),
       contentType,
+      size: blob.size,
     };
   } finally {
     URL.revokeObjectURL(objectUrl);
@@ -319,7 +321,7 @@ function buildRois(imageData, scenario) {
       rois: scenario.rois,
       anomalyDensity: scenario.anomalyDensity,
       fallbackUsed: true,
-      summary: "AOD 产品当前无有效像素，已回退到预置候选区。",
+      summary: "AOD 产品当前没有有效像元，已回退到预设候选区域。",
     };
   }
 
@@ -385,43 +387,117 @@ function blendQuality(baseValue, influence, weight) {
   return clamp(baseValue * (1 - weight) + influence * weight, 0.35, 0.95);
 }
 
-function resolveVisualSource(scenario, observation) {
+const layerProbeCache = new Map();
+
+async function probeLayerAvailability(layer, bbox, day) {
+  const key = `${layer}:${day}:${bbox.join(",")}`;
+  if (!layerProbeCache.has(key)) {
+    const url = buildGetMapUrl({
+      layer,
+      bbox,
+      width: 64,
+      height: 64,
+      time: day,
+      format: "image/jpeg",
+      transparent: false,
+    });
+
+    const probe = fetch(url, { mode: "cors" })
+      .then(async (response) => {
+        if (!response.ok) {
+          return false;
+        }
+        const contentType = response.headers.get("content-type") || "";
+        if (!contentType.startsWith("image/")) {
+          return false;
+        }
+        const blob = await response.blob();
+        return blob.size > 512;
+      })
+      .catch(() => false);
+
+    layerProbeCache.set(key, probe);
+  }
+
+  return layerProbeCache.get(key);
+}
+
+async function resolveVisualSource(scenario, observation) {
   const profile = scenario.imageryProfile;
-  const rapidStart = new Date(profile.rapidStartUtc);
-  const localHour = observation.getHours();
-  const rapidEligible = observation.getTime() >= rapidStart.getTime();
+  const day = dayString(observation);
+  const configured = Array.isArray(profile.dailyLayers)
+    ? profile.dailyLayers
+    : [profile.dailyLayer, ...DEFAULT_DAILY_LAYERS];
+  const candidates = [...new Set(configured.filter(Boolean))];
 
-  if (rapidEligible) {
-    const rapidLayer =
-      localHour >= 7 && localHour <= 18 ? profile.rapidDayLayer : profile.rapidNightLayer;
-    const rapidLabel =
-      rapidLayer === profile.rapidDayLayer
-        ? "Himawari AHI 红光可见光"
-        : "Himawari AHI Air Mass";
-
-    return {
-      layer: rapidLayer,
-      label: rapidLabel,
-      time: rapidTimeString(observation),
-      cadenceNote: "10 分钟级时序底图",
-      note: `当前底图按北京时间 ${pad2(localHour)}:00 对应时刻加载。`,
-    };
+  for (const layer of candidates) {
+    if (await probeLayerAvailability(layer, profile.bbox, day)) {
+      return {
+        layer,
+        label: layer
+          .replace("_CorrectedReflectance_TrueColor", "")
+          .replaceAll("_", " "),
+        time: day,
+        cadenceNote: "官方日尺度连续更新底图",
+        note:
+          observation.getHours() === 0
+            ? `当前显示的是 ${day} 的官方真彩色遥感底图。`
+            : `当前显示的是 ${day} 的官方日尺度真彩色遥感底图；小时滑块用于设置任务发生时刻，而不是切换小时级底图。`,
+      };
+    }
   }
 
   return {
-    layer: profile.dailyLayer,
-    label: "MODIS Terra 真彩色",
-    time: dayString(observation),
-    cadenceNote: "日尺度底图",
-    note: "当前日期早于 Himawari 快速产品稳定覆盖时段，已回退到日尺度底图。",
+    layer: candidates[0],
+    label: "NASA GIBS 日尺度真彩色",
+    time: day,
+    cadenceNote: "官方日尺度连续更新底图",
+    note: `当前优先使用 ${day} 的官方真彩色遥感底图。`,
   };
+}
+
+function applyPrediction(baseScenario, prediction, sourceLabel) {
+  return {
+    ...baseScenario,
+    rois: Array.isArray(prediction.rois) && prediction.rois.length ? prediction.rois : baseScenario.rois,
+    anomalyDensity: prediction.anomaly_density ?? baseScenario.anomalyDensity,
+    analysis: {
+      ...baseScenario.analysis,
+      sourceLabel,
+      summary:
+        prediction.summary ||
+        `连续反演模型识别到 ${Array.isArray(prediction.rois) ? prediction.rois.length : 0} 个异常候选区域。`,
+      method: "连续反演强度场 + ROI 提取",
+      fallbackUsed: Boolean(prediction.fallback_used),
+    },
+    observation: {
+      ...baseScenario.observation,
+      summary: `${baseScenario.imagery.note} ${prediction.summary || "连续反演模型已完成异常提取。"}`
+    },
+  };
+}
+
+let staticPredictionsPromise = null;
+
+async function getStaticPredictions() {
+  if (!staticPredictionsPromise) {
+    staticPredictionsPromise = fetch(STATIC_PREDICTIONS_URL)
+      .then(async (response) => {
+        if (!response.ok) {
+          return null;
+        }
+        return response.json();
+      })
+      .catch(() => null);
+  }
+  return staticPredictionsPromise;
 }
 
 export async function enrichScenarioWithRemoteData(baseScenario) {
   const scenario = JSON.parse(JSON.stringify(baseScenario));
   const observation = new Date(scenario.observation.iso);
   const profile = scenario.imageryProfile;
-  const visualSource = resolveVisualSource(scenario, observation);
+  const visualSource = await resolveVisualSource(scenario, observation);
   const displayUrl = buildGetMapUrl({
     layer: visualSource.layer,
     bbox: profile.bbox,
@@ -477,23 +553,80 @@ export async function enrichScenarioWithRemoteData(baseScenario) {
       0.32
     );
     scenario.lowContrast =
-      scenario.lowContrast || scenario.radiometricQuality < Math.max(0.56, scenario.baseRadiometricQuality - 0.06);
+      scenario.lowContrast ||
+      scenario.radiometricQuality < Math.max(0.56, scenario.baseRadiometricQuality - 0.06);
     scenario.analysis.summary = detected.summary;
     scenario.analysis.fallbackUsed = detected.fallbackUsed;
     scenario.observation.summary = `${visualSource.note} ${detected.summary}`;
 
     return scenario;
   } catch (error) {
-    scenario.imagery = {
-      ...scenario.imagery,
-      sourceLabel: `${scenario.imagery.sourceLabel}（底图仍为官方图层）`,
-    };
     scenario.analysis = {
       ...scenario.analysis,
       fallbackUsed: true,
-      summary: `官方 AOD 图层加载失败，已回退到预置候选区。${error.message}`,
+      summary: `官方 AOD 图层加载失败，已回退到预设候选区域。${error.message}`,
     };
-    scenario.observation.summary = `${visualSource.note} 由于分析图层未正常返回，本次使用预置候选区继续演示。`;
+    scenario.observation.summary = `${visualSource.note} 由于分析图层未正常返回，本次使用预设候选区继续演示。`;
     return scenario;
+  }
+}
+
+let modelStatusPromise = null;
+
+async function getModelStatus() {
+  if (!modelStatusPromise) {
+    modelStatusPromise = fetch("api/model-status")
+      .then(async (response) => {
+        if (!response.ok) {
+          return { available: false };
+        }
+        return response.json();
+      })
+      .catch(() => ({ available: false }));
+  }
+
+  return modelStatusPromise;
+}
+
+export async function tryEnhanceScenarioWithLocalModel(baseScenario) {
+  const bundle = await getStaticPredictions();
+  const staticPrediction =
+    bundle?.predictions?.[baseScenario.id]?.[baseScenario.observation.dateValue] ?? null;
+
+  if (staticPrediction) {
+    return applyPrediction(baseScenario, staticPrediction, "预计算连续反演模型");
+  }
+
+  const status = await getModelStatus();
+  if (!status.available) {
+    return baseScenario;
+  }
+
+  try {
+    const query = new URLSearchParams({
+      scene: baseScenario.id,
+      date: baseScenario.observation.dateValue,
+    });
+    const response = await fetch(`api/model-infer?${query.toString()}`);
+    if (!response.ok) {
+      return baseScenario;
+    }
+
+    const prediction = await response.json();
+    if (!Array.isArray(prediction.rois) || prediction.rois.length === 0) {
+      return {
+        ...baseScenario,
+        analysis: {
+          ...baseScenario.analysis,
+          sourceLabel: `${baseScenario.analysis.sourceLabel} + 本地连续反演模型`,
+          summary: prediction.summary || "本地连续反演模型已启动，但当前场景未提取到稳定异常区域。",
+          fallbackUsed: true,
+        },
+      };
+    }
+
+    return applyPrediction(baseScenario, prediction, "本地连续反演模型");
+  } catch {
+    return baseScenario;
   }
 }

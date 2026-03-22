@@ -9,7 +9,7 @@ import {
   toInputDateValue,
   dateValueToDayIndex,
 } from "./scenarios.mjs";
-import { enrichScenarioWithRemoteData } from "./remoteSensing.mjs";
+import { enrichScenarioWithRemoteData, tryEnhanceScenarioWithLocalModel } from "./remoteSensing.mjs";
 import {
   buildNarrative,
   buildReportPayload,
@@ -629,7 +629,12 @@ async function getObservedScenario(snapshot = null) {
   const key = cacheKeyForSnapshot(baseSnapshot);
 
   if (!sceneCache.has(key)) {
-    sceneCache.set(key, enrichScenarioWithRemoteData(baseSnapshot));
+    sceneCache.set(
+      key,
+      enrichScenarioWithRemoteData(baseSnapshot).then((remoteScenario) =>
+        tryEnhanceScenarioWithLocalModel(remoteScenario)
+      )
+    );
   }
 
   return sceneCache.get(key);

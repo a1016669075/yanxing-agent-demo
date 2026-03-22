@@ -1,5 +1,11 @@
 const TIMELINE_START = new Date(2026, 0, 1, 0, 0, 0, 0);
 const DAY_MS = 24 * 60 * 60 * 1000;
+const DAILY_LAYERS = [
+  "VIIRS_NOAA21_CorrectedReflectance_TrueColor",
+  "VIIRS_NOAA20_CorrectedReflectance_TrueColor",
+  "VIIRS_SNPP_CorrectedReflectance_TrueColor",
+  "MODIS_Terra_CorrectedReflectance_TrueColor",
+];
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -20,10 +26,10 @@ function formatDateValue(date) {
 export const scenarios = [
   {
     id: "dust-frontier",
-    title: "河西沙尘锋面",
+    title: "河西走廊沙尘锋面",
     type: "dust",
     mission: "优先锁定沙尘锋面核心区，在 6 分钟内给出可用的反演摘要。",
-    sensor: "Himawari AHI / MODIS Terra 协同观测",
+    sensor: "VIIRS NOAA-21 / MODIS Terra 协同观测",
     defaultBudgetMin: 6,
     defaultPowerMode: "balanced",
     baseCloudCover: 0.22,
@@ -39,10 +45,8 @@ export const scenarios = [
       displayWidth: 1200,
       displayHeight: 800,
       aspectRatio: "3 / 2",
-      dailyLayer: "MODIS_Terra_CorrectedReflectance_TrueColor",
-      rapidDayLayer: "Himawari_AHI_Band3_Red_Visible_1km",
-      rapidNightLayer: "Himawari_AHI_Air_Mass",
-      rapidStartUtc: "2026-02-23T02:50:00Z",
+      dailyLayer: DAILY_LAYERS[0],
+      dailyLayers: DAILY_LAYERS,
     },
     analysisProfile: {
       layer: "MODIS_Terra_Aerosol_Optical_Depth_3km",
@@ -85,10 +89,10 @@ export const scenarios = [
   },
   {
     id: "urban-plume",
-    title: "三角洲城市污染羽流",
+    title: "珠三角城市污染羽流",
     type: "pollution",
     mission: "优先筛查城市污染羽流，只对高风险区域触发 PM 反演，并控制下传负载。",
-    sensor: "Himawari AHI / MODIS Terra 协同观测",
+    sensor: "VIIRS NOAA-21 / MODIS Terra 协同观测",
     defaultBudgetMin: 7,
     defaultPowerMode: "constrained",
     baseCloudCover: 0.42,
@@ -97,17 +101,15 @@ export const scenarios = [
     lowContrast: false,
     bandwidthBudgetMb: 22,
     description:
-      "污染异常呈条带扩散，且云污染接近阈值。标准流程容易在质量筛查阶段失败，适合演示插入云掩膜的修复动作。",
+      "污染异常呈条带扩散，且云污染接近阈值。标准流程容易在质量筛查阶段失败，适合展示插入云掩膜的修复动作。",
     imageryProfile: {
       label: "珠三角及沿海城市群",
       bbox: [110.2, 20.4, 117.6, 25.6],
       displayWidth: 1200,
       displayHeight: 800,
       aspectRatio: "3 / 2",
-      dailyLayer: "MODIS_Terra_CorrectedReflectance_TrueColor",
-      rapidDayLayer: "Himawari_AHI_Band3_Red_Visible_1km",
-      rapidNightLayer: "Himawari_AHI_Air_Mass",
-      rapidStartUtc: "2026-02-23T02:50:00Z",
+      dailyLayer: DAILY_LAYERS[0],
+      dailyLayers: DAILY_LAYERS,
     },
     analysisProfile: {
       layer: "MODIS_Terra_Aerosol_Optical_Depth_3km",
@@ -153,7 +155,7 @@ export const scenarios = [
     title: "暮光混合异常",
     type: "mixed",
     mission: "在短预算下判断是否值得做定量产品，必要时主动降级为异常热区简报。",
-    sensor: "Himawari AHI / MODIS Terra 协同观测",
+    sensor: "VIIRS NOAA-21 / MODIS Terra 协同观测",
     defaultBudgetMin: 5,
     defaultPowerMode: "constrained",
     baseCloudCover: 0.18,
@@ -169,10 +171,8 @@ export const scenarios = [
       displayWidth: 1000,
       displayHeight: 1000,
       aspectRatio: "1 / 1",
-      dailyLayer: "MODIS_Terra_CorrectedReflectance_TrueColor",
-      rapidDayLayer: "Himawari_AHI_Band3_Red_Visible_1km",
-      rapidNightLayer: "Himawari_AHI_Air_Mass",
-      rapidStartUtc: "2026-02-23T02:50:00Z",
+      dailyLayer: DAILY_LAYERS[0],
+      dailyLayers: DAILY_LAYERS,
     },
     analysisProfile: {
       layer: "MODIS_Terra_Aerosol_Optical_Depth_3km",
@@ -287,7 +287,7 @@ export function materializeScenarioAt(id, observationDate) {
     aspectRatio: base.imageryProfile.aspectRatio,
     credit: "底图来源：NASA GIBS（加载中）",
     sourceLabel: "准备加载真实遥感底图",
-    note: "将根据所选日期与时刻切换官方遥感图像。",
+    note: "将根据所选日期切换官方真彩色遥感图像。",
   };
   base.analysis = {
     sourceLabel: base.analysisProfile.label,
@@ -301,7 +301,7 @@ export function materializeScenarioAt(id, observationDate) {
     dateValue: formatDateValue(observation),
     dayIndex: dateValueToDayIndex(formatDateValue(observation)),
     hour: observation.getHours(),
-    summary: "当前将优先尝试加载官方遥感底图与 AOD 产品，再提取异常区域。",
+    summary: "当前将优先加载官方日尺度遥感底图，再叠加异常区域提取结果。",
   };
 
   return base;
