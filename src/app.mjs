@@ -1,4 +1,14 @@
-import { scenarios, getScenarioById } from "./scenarios.mjs";
+import {
+  scenarios,
+  getScenarioById,
+  getTimelineBounds,
+  getDefaultObservation,
+  materializeScenarioAt,
+  observationFromParts,
+  formatObservationLabel,
+  toInputDateValue,
+  dateValueToDayIndex,
+} from "./scenarios.mjs";
 import {
   buildNarrative,
   buildReportPayload,
@@ -17,6 +27,17 @@ const downlinkSelect = document.querySelector("#downlinkSelect");
 const runButton = document.querySelector("#runButton");
 const exportButton = document.querySelector("#exportButton");
 const resetMemoryButton = document.querySelector("#resetMemoryButton");
+
+const overlayToggle = document.querySelector("#overlayToggle");
+const dateInput = document.querySelector("#dateInput");
+const dateSlider = document.querySelector("#dateSlider");
+const hourSlider = document.querySelector("#hourSlider");
+const hourValue = document.querySelector("#hourValue");
+const timelineLabel = document.querySelector("#timelineLabel");
+const timelineBadge = document.querySelector("#timelineBadge");
+const timelineStartLabel = document.querySelector("#timelineStartLabel");
+const timelineCurrentLabel = document.querySelector("#timelineCurrentLabel");
+const timelineEndLabel = document.querySelector("#timelineEndLabel");
 
 const missionBrief = document.querySelector("#missionBrief");
 const workflowPlan = document.querySelector("#workflowPlan");
@@ -93,6 +114,12 @@ function formatPercent(value) {
   return `${Math.round(value * 100)}%`;
 }
 
+function formatShortDate(date) {
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
+}
+
 function productLabel(product) {
   return PRODUCT_LABELS[product] ?? "未生成";
 }
@@ -119,8 +146,16 @@ function renderScenarioSelect() {
     .join("");
 }
 
-function currentScenario() {
+function baseScenario() {
   return getScenarioById(scenarioSelect.value);
+}
+
+function currentObservation() {
+  return observationFromParts(Number(dateSlider.value), Number(hourSlider.value));
+}
+
+function currentScenario() {
+  return materializeScenarioAt(baseScenario().id, currentObservation());
 }
 
 function currentOptions() {
@@ -131,14 +166,39 @@ function currentOptions() {
   };
 }
 
+function syncTimelineLabels() {
+  const scenario = currentScenario();
+  const observation = currentObservation();
+  timelineLabel.textContent = formatObservationLabel(observation);
+  timelineBadge.textContent = `云量 ${formatPercent(scenario.cloudCover)} · 质量 ${formatPercent(
+    scenario.radiometricQuality
+  )}`;
+  timelineCurrentLabel.textContent = formatShortDate(observation);
+  dateInput.value = toInputDateValue(observation);
+  hourValue.textContent = `${String(observation.getHours()).padStart(2, "0")}:00`;
+}
+
 function seedControls() {
   const scenario = scenarios[1] ?? scenarios[0];
   const preset = getOptionPreset(scenario);
+  const timeline = getTimelineBounds();
+  const observation = getDefaultObservation();
+
   scenarioSelect.value = scenario.id;
   budgetInput.value = String(preset.budgetMin);
   powerModeSelect.value = preset.powerMode;
   downlinkSelect.value = preset.downlinkPolicy;
   budgetValue.textContent = `${preset.budgetMin} 分钟`;
+
+  dateSlider.max = String(timeline.totalDays - 1);
+  dateSlider.value = String(observation.dayIndex);
+  hourSlider.value = String(observation.hour);
+  dateInput.min = toInputDateValue(timeline.start);
+  dateInput.max = toInputDateValue(timeline.end);
+  timelineStartLabel.textContent = formatShortDate(timeline.start);
+  timelineEndLabel.textContent = formatShortDate(timeline.end);
+
+  syncTimelineLabels();
 }
 
 function renderMissionBrief(scenario, options) {
@@ -150,19 +210,30 @@ function renderMissionBrief(scenario, options) {
         <p>${scenario.mission}</p>
       </div>
       <div class="brief-card">
+        <span>观测时刻</span>
+        <strong>${scenario.observation.label}</strong>
+        <p>${scenario.observation.summary}</p>
+      </div>
+      <div class="brief-card">
         <span>场景压力</span>
-        <strong>云量 ${formatPercent(scenario.cloudCover)} · 质量 ${formatPercent(scenario.radiometricQuality)}</strong>
+        <strong>云量 ${formatPercent(scenario.cloudCover)} · 质量 ${formatPercent(
+          scenario.radiometricQuality
+        )}</strong>
         <p>${scenario.description}</p>
       </div>
       <div class="brief-card">
         <span>当前约束</span>
         <strong>${options.budgetMin} 分钟时延预算</strong>
-        <p>${scenario.bandwidthBudgetMb} MB 下传预算 · ${powerModeLabel(options.powerMode)}功耗模式 · ${downlinkLabel(options.downlinkPolicy)}</p>
+        <p>${scenario.bandwidthBudgetMb} MB 下传预算 · ${powerModeLabel(
+          options.powerMode
+        )}功耗模式 · ${downlinkLabel(options.downlinkPolicy)}</p>
       </div>
       <div class="brief-card">
         <span>候选区域</span>
         <strong>${scenario.rois.length} 个候选区域</strong>
-        <p>${scenario.sensor} · ${typeLabel(scenario.type)}</p>
+        <p>${scenario.sensor} · ${typeLabel(scenario.type)} · 异常密度 ${formatPercent(
+          scenario.anomalyDensity
+        )}</p>
       </div>
     </div>
   `;
@@ -239,51 +310,77 @@ async function renderLogs(logs) {
 }
 
 function renderSceneMap(scenario, result = null) {
+  const showAnnotations = overlayToggle.checked;
   const selectedIds = new Set(result?.state.processedRois.map((roi) => roi.id) ?? []);
   const degraded = result?.state.outputProduct === "anomaly-heatmap";
-  const overlays = scenario.rois
-    .map((roi) => {
-      const classes = ["roi-box"];
-      if (selectedIds.has(roi.id)) {
-        classes.push("selected");
-      }
-      if (selectedIds.has(roi.id) && degraded) {
-        classes.push("degraded");
-      }
 
-      const strength = Math.max(0.18, Math.min(0.72, roi.risk * 0.75));
+  const overlays = showAnnotations
+    ? scenario.rois
+        .map((roi) => {
+          const classes = ["roi-box"];
+          if (selectedIds.has(roi.id)) {
+            classes.push("selected");
+          }
+          if (selectedIds.has(roi.id) && degraded) {
+            classes.push("degraded");
+          }
 
-      return `
-        <div
-          class="${classes.join(" ")}"
-          style="
-            left:${roi.box.left}%;
-            top:${roi.box.top}%;
-            width:${roi.box.width}%;
-            height:${roi.box.height}%;
-            --roi-strength:${strength};
-          "
-        >
-          <div class="roi-fill"></div>
-          <div class="roi-tag">
-            <strong>${roi.id}</strong>
-            <span>${roi.name}</span>
-          </div>
-        </div>
-      `;
-    })
-    .join("");
+          const strength = Math.max(0.18, Math.min(0.72, roi.risk * 0.75));
+
+          return `
+            <div
+              class="${classes.join(" ")}"
+              style="
+                left:${roi.box.left}%;
+                top:${roi.box.top}%;
+                width:${roi.box.width}%;
+                height:${roi.box.height}%;
+                --roi-strength:${strength};
+              "
+            >
+              <div class="roi-fill"></div>
+              <div class="roi-tag">
+                <strong>${roi.id}</strong>
+                <span>${roi.name}</span>
+              </div>
+            </div>
+          `;
+        })
+        .join("")
+    : "";
 
   sceneMap.innerHTML = `
     <div class="scene-frame" style="--scene-ratio:${scenario.imagery.aspectRatio}">
       <img class="scene-image" src="${scenario.imagery.src}" alt="${scenario.title} 遥感底图" />
-      <div class="roi-layer">${overlays}</div>
+      ${showAnnotations ? `<div class="roi-layer">${overlays}</div>` : ""}
     </div>
-    <div class="legend">
-      <span class="legend-item"><span class="swatch" style="background: rgba(255,125,102,0.85)"></span>异常热区</span>
-      <span class="legend-item"><span class="swatch" style="background: rgba(87,217,193,0.85)"></span>本次已处理区域</span>
-      <span class="legend-item"><span class="swatch" style="background: rgba(255,178,77,0.85)"></span>降级输出</span>
+    <div class="scene-meta-grid">
+      <div class="scene-meta-card">
+        <span>当前观测</span>
+        <strong>${scenario.observation.label}</strong>
+        <p>${scenario.observation.summary}</p>
+      </div>
+      <div class="scene-meta-card">
+        <span>标记模式</span>
+        <strong>${showAnnotations ? "已显示标记" : "已关闭标记"}</strong>
+        <p>${
+          showAnnotations
+            ? "当前显示异常区域分布和本次真正进入处理的重点区域。"
+            : "当前隐藏所有标记，便于直接对照底图观察异常区域标记是否准确。"
+        }</p>
+      </div>
     </div>
+    ${
+      showAnnotations
+        ? `
+          <div class="legend">
+            <span class="legend-item"><span class="swatch" style="background: rgba(255,125,102,0.85)"></span>异常热区</span>
+            <span class="legend-item"><span class="swatch" style="background: rgba(87,217,193,0.85)"></span>本次已处理区域</span>
+            <span class="legend-item"><span class="swatch" style="background: rgba(255,178,77,0.85)"></span>降级输出</span>
+          </div>
+        `
+        : '<div class="scene-compare-note">标记已隐藏，可直接进行目视比对。</div>'
+    }
     <div class="scene-credit">${scenario.imagery.credit}</div>
   `;
 }
@@ -312,7 +409,7 @@ function buildComparisonExplanation(agentRun, baselineRun) {
   }
 
   lines.push(
-    `因此真正应该综合看的不是单个占比，而是“是否成功完成任务、结果质量是否更高、是否抓住了关键异常区域、最终科学收益是否更强”。本次运行中，智能体方案的结果质量为 ${agentRun.result.metrics.confidence}% ，固定流程为 ${baselineRun.metrics.confidence}% 。`
+    `因此真正应该综合看的不是单个占比，而是“是否成功完成任务、结果质量是否更高、是否抓住了关键异常区域、最终科学收益是否更强”。本次运行中，智能体方案的结果质量为 ${agentRun.result.metrics.confidence}%，固定流程为 ${baselineRun.metrics.confidence}%。`
   );
 
   return lines;
@@ -435,6 +532,22 @@ function renderPlanNotes(plan) {
   workflowPlan.prepend(noteCard);
 }
 
+function invalidateRunOutputs() {
+  const scenario = currentScenario();
+  const options = currentOptions();
+
+  latestReport = null;
+  renderMissionBrief(scenario, options);
+  workflowPlan.innerHTML = '<div class="empty-state">点击“开始演示”后，这里会生成对应的处理流程。</div>';
+  executionLog.innerHTML = '<div class="empty-state">运行后，这里会显示逐步处理记录。</div>';
+  renderSceneMap(scenario);
+  metricsCards.innerHTML = '<div class="empty-state">运行完成后，这里会展示结果指标。</div>';
+  compareTable.innerHTML = "";
+  compareExplain.innerHTML =
+    '<div class="empty-state">运行完成后，这里会补充解释为什么某些指标更高但方案仍然更优。</div>';
+  narrativePanel.innerHTML = '<div class="empty-state">运行完成后，这里会生成一段便于汇报的说明文字。</div>';
+}
+
 async function runMission() {
   const scenario = currentScenario();
   const options = currentOptions();
@@ -465,13 +578,15 @@ function exportReport() {
     return;
   }
 
+  const dayTag = latestReport.scenario.observation.dateValue;
+  const hourTag = String(latestReport.scenario.observation.hour).padStart(2, "0");
   const blob = new Blob([JSON.stringify(latestReport, null, 2)], {
     type: "application/json",
   });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `satatmo-agent-report-${latestReport.scenario.id}.json`;
+  anchor.download = `satatmo-agent-report-${latestReport.scenario.id}-${dayTag}-${hourTag}.json`;
   anchor.click();
   URL.revokeObjectURL(url);
 }
@@ -483,37 +598,65 @@ function resetMemory() {
 }
 
 function handleScenarioChange() {
-  const scenario = currentScenario();
-  const preset = getOptionPreset(scenario);
+  const preset = getOptionPreset(baseScenario());
   budgetInput.value = String(preset.budgetMin);
   powerModeSelect.value = preset.powerMode;
   downlinkSelect.value = preset.downlinkPolicy;
   budgetValue.textContent = `${preset.budgetMin} 分钟`;
-  renderMissionBrief(scenario, preset);
-  workflowPlan.innerHTML = '<div class="empty-state">点击“开始演示”后，这里会生成对应的处理流程。</div>';
-  executionLog.innerHTML = '<div class="empty-state">运行后，这里会显示逐步处理记录。</div>';
-  renderSceneMap(scenario);
-  metricsCards.innerHTML = '<div class="empty-state">运行完成后，这里会展示结果指标。</div>';
-  compareTable.innerHTML = "";
-  compareExplain.innerHTML = '<div class="empty-state">运行完成后，这里会补充解释为什么某些指标更高但方案仍然更优。</div>';
-  narrativePanel.innerHTML = '<div class="empty-state">运行完成后，这里会生成一段便于汇报的说明文字。</div>';
+  syncTimelineLabels();
+  invalidateRunOutputs();
 }
 
-function handleBudgetChange() {
+function handleDateSliderChange() {
+  syncTimelineLabels();
+  invalidateRunOutputs();
+}
+
+function handleDateInputChange() {
+  dateSlider.value = String(dateValueToDayIndex(dateInput.value));
+  syncTimelineLabels();
+  invalidateRunOutputs();
+}
+
+function handleHourChange() {
+  syncTimelineLabels();
+  invalidateRunOutputs();
+}
+
+function handleOptionChange() {
   budgetValue.textContent = `${budgetInput.value} 分钟`;
-  renderMissionBrief(currentScenario(), currentOptions());
+  invalidateRunOutputs();
+}
+
+function handleOverlayToggle() {
+  const scenario = currentScenario();
+
+  if (
+    latestReport &&
+    latestReport.scenario.id === scenario.id &&
+    latestReport.scenario.observation.iso === scenario.observation.iso
+  ) {
+    renderSceneMap(scenario, latestReport.agentResult);
+    return;
+  }
+
+  renderSceneMap(scenario);
 }
 
 function bootstrap() {
   renderScenarioSelect();
   seedControls();
-  handleScenarioChange();
+  invalidateRunOutputs();
   renderMemory(readMemory());
 
   scenarioSelect.addEventListener("change", handleScenarioChange);
-  budgetInput.addEventListener("input", handleBudgetChange);
-  powerModeSelect.addEventListener("change", () => renderMissionBrief(currentScenario(), currentOptions()));
-  downlinkSelect.addEventListener("change", () => renderMissionBrief(currentScenario(), currentOptions()));
+  budgetInput.addEventListener("input", handleOptionChange);
+  powerModeSelect.addEventListener("change", handleOptionChange);
+  downlinkSelect.addEventListener("change", handleOptionChange);
+  overlayToggle.addEventListener("change", handleOverlayToggle);
+  dateSlider.addEventListener("input", handleDateSliderChange);
+  dateInput.addEventListener("change", handleDateInputChange);
+  hourSlider.addEventListener("input", handleHourChange);
   runButton.addEventListener("click", runMission);
   exportButton.addEventListener("click", exportReport);
   resetMemoryButton.addEventListener("click", resetMemory);
