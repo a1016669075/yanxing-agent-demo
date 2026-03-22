@@ -258,6 +258,12 @@ button:hover {
   transform: translateY(-1px);
 }
 
+button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  transform: none;
+}
+
 .primary-button {
   background: linear-gradient(135deg, var(--teal), #a4ffef);
 }
@@ -520,6 +526,15 @@ button:hover {
   gap: 8px;
 }
 
+.scene-action-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.scene-action-row .primary-button {
+  min-width: 220px;
+}
+
 .timeline-slider {
   accent-color: var(--teal);
 }
@@ -664,6 +679,25 @@ button:hover {
   line-height: 1.65;
 }
 
+.scene-loading-card {
+  display: grid;
+  gap: 8px;
+  padding: 22px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+}
+
+.scene-loading-card strong {
+  font-size: 1.05rem;
+}
+
+.scene-loading-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 .scene-compare-note {
   padding: 14px 16px;
   border-radius: 16px;
@@ -773,6 +807,15 @@ button:hover {
   .timeline-date-row {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .scene-action-row {
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .scene-action-row .primary-button {
+    width: 100%;
   }
 
   .scene-meta-grid {

@@ -55,7 +55,7 @@ export const workflowLibrary = {
 export const toolCatalog = {
   ingest_scene: {
     label: "读取场景",
-    summary: "读取场景元数据和任务指令，初始化星上预算。",
+    summary: "读取官方遥感底图、任务指令和预算约束，初始化本次星上处理。",
   },
   quality_screen: {
     label: "质量筛查",
@@ -67,7 +67,7 @@ export const toolCatalog = {
   },
   detect_hotspots: {
     label: "异常区域检测",
-    summary: "识别高风险大气异常候选区。",
+    summary: "基于官方气溶胶产品提取高风险异常候选区。",
   },
   prioritize_rois: {
     label: "重点区域排序",

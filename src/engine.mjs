@@ -183,7 +183,7 @@ function executeStep(stepId, scenario, options, state, mode = "agent") {
     consume(state, cost);
     return {
       status: "ok",
-      message: `已读取${scenario.sensor}场景，并完成 ${options.budgetMin} 分钟时延预算初始化。`,
+      message: `已读取${scenario.sensor}场景，并接入${scenario.imagery?.sourceLabel ?? "当前遥感底图"}，完成 ${options.budgetMin} 分钟时延预算初始化。`,
     };
   }
 
@@ -239,7 +239,7 @@ function executeStep(stepId, scenario, options, state, mode = "agent") {
 
     return {
       status: "ok",
-      message: `共识别到 ${state.candidateRois.length} 个候选异常区域。`,
+      message: `${scenario.analysis?.summary ?? "已完成异常检测"} 共识别到 ${state.candidateRois.length} 个候选异常区域。`,
     };
   }
 
@@ -528,7 +528,7 @@ export function buildNarrative(scenario, agentRun, baselineRun) {
       : "最终输出保持为定量反演结果，说明当前场景仍具备星上量化处理条件。";
 
   return [
-    `场景“${scenario.title}”的核心矛盾是预算受限，但高风险区域不能漏判。系统先根据任务类型和预算选流程，再通过重点区域排序把算力集中到更值得处理的区域。`,
+    `场景“${scenario.title}”的核心矛盾是预算受限，但高风险区域不能漏判。系统先接入${scenario.imagery?.sourceLabel ?? "官方遥感底图"}与${scenario.analysis?.sourceLabel ?? "异常检测工具"}，再根据任务类型和预算选流程，把算力集中到更值得处理的区域。`,
     `${repairedText}${productText}`,
     `与固定流程相比，当前方案的时延占比为 ${agentRun.result.metrics.budgetUsage}% ，固定流程为 ${baselineRun.metrics.budgetUsage}% 。这说明仅靠流程层的决策优化，就能带来明显的星上处理收益。`,
   ];
