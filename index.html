@@ -85,7 +85,7 @@
         <section class="panel mission-panel">
           <div class="panel-head">
             <h2>任务概览</h2>
-            <p>汇总当前场景、风险点和星上资源约束。</p>
+            <p>汇总当前场景、风险点、观测时刻和星上资源约束。</p>
           </div>
           <div id="missionBrief" class="mission-brief"></div>
         </section>
@@ -109,8 +109,52 @@
         <section class="panel map-panel">
           <div class="panel-head">
             <h2>场景示意</h2>
-            <p>显示异常区域分布和本次真正进入处理的重点区域。</p>
+            <p>支持在不同观测时刻进行查看，并可关闭标记做目视比对。</p>
           </div>
+
+          <div class="scene-toolbar">
+            <label class="scene-toggle">
+              <input id="overlayToggle" type="checkbox" checked />
+              <span>显示异常区域标记</span>
+            </label>
+
+            <div class="timeline-panel">
+              <div class="timeline-row">
+                <div>
+                  <span class="timeline-label">观测时刻</span>
+                  <strong id="timelineLabel"></strong>
+                </div>
+                <span id="timelineBadge" class="timeline-badge"></span>
+              </div>
+
+              <div class="timeline-date-row">
+                <label class="field compact-field">
+                  <span>日期</span>
+                  <input id="dateInput" type="date" />
+                </label>
+                <label class="field compact-field">
+                  <span>小时</span>
+                  <strong id="hourValue" class="timeline-hour"></strong>
+                </label>
+              </div>
+
+              <div class="timeline-slider-group">
+                <span class="timeline-mini-label">日期时间轴</span>
+                <input id="dateSlider" class="timeline-slider" type="range" min="0" max="0" step="1" />
+                <div class="timeline-scale">
+                  <span id="timelineStartLabel"></span>
+                  <span id="timelineCurrentLabel"></span>
+                  <span id="timelineEndLabel"></span>
+                </div>
+              </div>
+
+              <div class="timeline-slider-group">
+                <span class="timeline-mini-label">时刻选择</span>
+                <input id="hourSlider" class="timeline-slider" type="range" min="0" max="23" step="1" />
+              </div>
+            </div>
+          </div>
+
           <div id="sceneMap" class="scene-map"></div>
         </section>
 

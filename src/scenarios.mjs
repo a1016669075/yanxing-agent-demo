@@ -1,3 +1,83 @@
+const TIMELINE_START = new Date(2026, 0, 1, 0, 0, 0, 0);
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function round(value, digits = 2) {
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
+}
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function hashText(text) {
+  let hash = 0;
+  for (const char of text) {
+    hash = (hash * 31 + char.charCodeAt(0)) % 1000003;
+  }
+  return hash;
+}
+
+function startOfToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+}
+
+function pad2(value) {
+  return String(value).padStart(2, "0");
+}
+
+function formatDateValue(date) {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+}
+
+function formatHour(value) {
+  return `${pad2(value)}:00`;
+}
+
+function buildObservationSummary(scenario, illumination, cloudCover, quality) {
+  const lightText =
+    illumination >= 0.72
+      ? "光照条件较好"
+      : illumination >= 0.38
+      ? "光照条件中等"
+      : "光照偏弱，需谨慎解释结果";
+
+  const cloudText =
+    cloudCover >= 0.45
+      ? "云干扰明显"
+      : cloudCover >= 0.28
+      ? "云量中等"
+      : "云干扰较弱";
+
+  const qualityText =
+    quality >= 0.72
+      ? "适合做较完整的定量处理"
+      : quality >= 0.58
+      ? "可在约束下执行重点反演"
+      : "更适合采用降级或快速流程";
+
+  return `${lightText}，${cloudText}，当前更${qualityText}。`;
+}
+
+function moveBox(box, dx, dy, scale = 1) {
+  const width = clamp(round(box.width * scale, 2), 10, 34);
+  const height = clamp(round(box.height * scale, 2), 10, 28);
+  const left = clamp(round(box.left + dx, 2), 1, 99 - width);
+  const top = clamp(round(box.top + dy, 2), 1, 99 - height);
+
+  return {
+    left,
+    top,
+    width,
+    height,
+  };
+}
+
 export const scenarios = [
   {
     id: "dust-frontier",
@@ -171,4 +251,114 @@ export const scenarios = [
 
 export function getScenarioById(id) {
   return scenarios.find((scenario) => scenario.id === id) ?? scenarios[0];
+}
+
+export function getTimelineBounds() {
+  const end = startOfToday();
+  const totalDays = Math.max(1, Math.floor((end.getTime() - TIMELINE_START.getTime()) / DAY_MS) + 1);
+
+  return {
+    start: new Date(TIMELINE_START),
+    end,
+    totalDays,
+  };
+}
+
+export function getDefaultObservation() {
+  const timeline = getTimelineBounds();
+  const now = new Date();
+
+  return {
+    dayIndex: timeline.totalDays - 1,
+    hour: now.getHours(),
+  };
+}
+
+export function observationFromParts(dayIndex, hour) {
+  const timeline = getTimelineBounds();
+  const safeDayIndex = clamp(Number(dayIndex) || 0, 0, timeline.totalDays - 1);
+  const safeHour = clamp(Number(hour) || 0, 0, 23);
+  const observation = new Date(TIMELINE_START.getTime() + safeDayIndex * DAY_MS);
+
+  observation.setHours(safeHour, 0, 0, 0);
+  return observation;
+}
+
+export function formatObservationLabel(date) {
+  return `${date.getFullYear()}年${pad2(date.getMonth() + 1)}月${pad2(date.getDate())}日 ${formatHour(
+    date.getHours()
+  )}`;
+}
+
+export function toInputDateValue(date) {
+  return formatDateValue(date);
+}
+
+export function dateValueToDayIndex(value) {
+  const raw = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(raw.getTime())) {
+    return getDefaultObservation().dayIndex;
+  }
+  const normalized = new Date(raw.getFullYear(), raw.getMonth(), raw.getDate(), 0, 0, 0, 0);
+  return clamp(Math.round((normalized.getTime() - TIMELINE_START.getTime()) / DAY_MS), 0, getTimelineBounds().totalDays - 1);
+}
+
+export function materializeScenarioAt(id, observationDate) {
+  const baseScenario = getScenarioById(id);
+  const scenario = clone(baseScenario);
+  const observation = new Date(observationDate);
+  const dayIndex = dateValueToDayIndex(formatDateValue(observation));
+  const hour = observation.getHours();
+  const sceneSeed = hashText(baseScenario.id);
+  const dailyPhase = dayIndex / 6 + sceneSeed * 0.0008;
+  const hourlyPhase = (hour / 24) * Math.PI * 2;
+  const illumination = clamp(Math.sin(((hour - 6) / 12) * Math.PI), 0, 1);
+  const dynamicCloud =
+    0.07 * Math.sin(dailyPhase) +
+    0.04 * Math.cos(hourlyPhase + sceneSeed * 0.0004) +
+    (baseScenario.type === "pollution" ? 0.02 : 0);
+  const cloudCover = clamp(baseScenario.cloudCover + dynamicCloud, 0.05, 0.72);
+  const qualityShift =
+    (illumination - 0.48) * (baseScenario.lowContrast ? 0.22 : 0.13) -
+    Math.max(0, cloudCover - baseScenario.cloudCover) * 0.24 +
+    0.03 * Math.sin(dailyPhase * 0.7);
+  const radiometricQuality = clamp(baseScenario.radiometricQuality + qualityShift, 0.38, 0.94);
+  const anomalyDensity = clamp(
+    baseScenario.anomalyDensity +
+      0.07 * Math.sin(dailyPhase * 0.9 + hourlyPhase * 0.35) +
+      (baseScenario.type === "dust" ? 0.03 * Math.cos(dailyPhase * 0.55) : 0),
+    0.35,
+    0.95
+  );
+
+  scenario.cloudCover = round(cloudCover);
+  scenario.radiometricQuality = round(radiometricQuality);
+  scenario.anomalyDensity = round(anomalyDensity);
+
+  scenario.rois = baseScenario.rois.map((roi, index) => {
+    const roiPhase = dailyPhase + index * 0.85 + hourlyPhase * 0.55;
+    const driftX = Math.sin(roiPhase * 1.25) * 1.8;
+    const driftY = Math.cos(roiPhase * 1.05) * 1.5;
+    const scale = 1 + Math.sin(roiPhase * 0.9) * 0.06;
+
+    return {
+      ...clone(roi),
+      risk: round(clamp(roi.risk + 0.08 * Math.sin(roiPhase) + (anomalyDensity - baseScenario.anomalyDensity) * 0.35, 0.35, 0.99)),
+      signal: round(clamp(roi.signal + 0.06 * Math.cos(roiPhase * 1.1) + (illumination - 0.5) * 0.08, 0.3, 0.96)),
+      cloud: round(clamp(roi.cloud + 0.05 * Math.sin(roiPhase * 0.8 + 0.7) + (cloudCover - baseScenario.cloudCover) * 0.6, 0.02, 0.75)),
+      box: moveBox(roi.box, driftX, driftY, scale),
+    };
+  });
+
+  scenario.observation = {
+    iso: observation.toISOString(),
+    label: formatObservationLabel(observation),
+    dateValue: formatDateValue(observation),
+    dayIndex,
+    hour,
+    illumination: round(illumination),
+    summary: buildObservationSummary(baseScenario, illumination, scenario.cloudCover, scenario.radiometricQuality),
+  };
+
+  return scenario;
 }
