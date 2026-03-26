@@ -10,3 +10,9 @@ paper*.pdf
 paper*.txt
 202*.pdf
 *.pdf
+ml/data/
+ml/__pycache__/
+*.pyc
+smoke-ui*.log
+smoke-ui*.out
+smoke-ui*.err

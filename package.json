@@ -5,6 +5,38 @@
   "scripts": {
     "start": "node server.js",
     "share": "node share.js",
+    "test:draw": "node --test src/roiDrawing.test.mjs",
+    "test:decision": "node --test src/agentDecision.test.mjs",
+    "test:eval": "node --test src/offlineEvalHarness.test.mjs",
+    "test:fmask": "node --test src/fmaskAdapter.test.mjs",
+    "test:focus": "node --test src/globalFocus.test.mjs",
+    "test:align": "node --test src/resampleAlignment.test.mjs",
+    "test:iteration": "node --test src/iterationPlan.test.mjs",
+    "test:json-tiles": "node --test src/jsonTileSlicer.test.mjs",
+    "test:layers": "node --test src/layerCatalog.test.mjs",
+    "test:laads": "node --test laadsSearch.test.cjs",
+    "test:asset": "node --test assetReader.test.cjs",
+    "test:cache": "node --test src/cacheIndex.test.mjs",
+    "test:cloudmask": "node --test cloudMaskCatalog.test.cjs",
+    "test:loop": "node --test src/agentLoop.test.mjs",
+    "test:inference": "node --test src/inferenceRunner.test.mjs",
+    "test:locator": "node --test src/sceneLocator.test.mjs",
+    "test:models": "node --test src/modelRegistry.test.mjs",
+    "test:preprocess": "node --test src/preprocessGate.test.mjs",
+    "test:proxy": "node --test basemapProxy.test.cjs",
+    "test:queue": "node --test src/asyncPrecomputeQueue.test.mjs",
+    "test:roi": "node --test src/roiSchema.test.mjs",
+    "test:s2cloudless": "node --test src/s2cloudlessAdapter.test.mjs",
+    "test:surface": "node --test src/surfaceMode.test.mjs",
+    "test:tasks": "node --test src/taskCatalog.test.mjs",
+    "test:planning": "node --test src/taskPlanning.test.mjs",
+    "test:stac": "node --test stacSearch.test.cjs",
+    "test:ui-smoke": "node qa/uiSmoke.mjs",
+    "test:ui-soak": "node qa/uiSoak.mjs",
+    "test:ui-memory": "node qa/memoryReplayFlow.mjs",
+    "test:vector": "node --test src/vectorPostprocess.test.mjs",
+    "test:vector-delivery": "node --test src/vectorTileDelivery.test.mjs",
+    "test:ui-global": "node qa/globalSelectionUx.mjs",
     "build:pages": "node prepare-pages.js",
     "deploy:pages": "npm run build:pages && gh-pages -d pages-dist -t"
   },
@@ -12,6 +44,7 @@
     "localtunnel": "^2.0.2"
   },
   "devDependencies": {
-    "gh-pages": "^6.3.0"
+    "gh-pages": "^6.3.0",
+    "playwright": "^1.58.2"
   }
 }

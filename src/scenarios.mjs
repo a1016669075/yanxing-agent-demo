@@ -1,3 +1,5 @@
+import { DEFAULT_ANALYSIS_LAYER_ID, DEFAULT_DAILY_IMAGERY_IDS, getAnalysisLayerConfig } from "./layerCatalog.mjs";
+
 const TIMELINE_START = new Date(2026, 0, 1, 0, 0, 0, 0);
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -20,10 +22,10 @@ function formatDateValue(date) {
 export const scenarios = [
   {
     id: "dust-frontier",
-    title: "河西沙尘锋面",
+    title: "河西走廊沙尘锋面",
     type: "dust",
     mission: "优先锁定沙尘锋面核心区，在 6 分钟内给出可用的反演摘要。",
-    sensor: "Himawari AHI / MODIS Terra 协同观测",
+    sensor: "VIIRS NOAA-21 / MODIS Terra 协同观测",
     defaultBudgetMin: 6,
     defaultPowerMode: "balanced",
     baseCloudCover: 0.22,
@@ -39,15 +41,11 @@ export const scenarios = [
       displayWidth: 1200,
       displayHeight: 800,
       aspectRatio: "3 / 2",
-      dailyLayer: "MODIS_Terra_CorrectedReflectance_TrueColor",
-      rapidDayLayer: "Himawari_AHI_Band3_Red_Visible_1km",
-      rapidNightLayer: "Himawari_AHI_Air_Mass",
-      rapidStartUtc: "2026-02-23T02:50:00Z",
+      dailyLayerId: DEFAULT_DAILY_IMAGERY_IDS[0],
+      dailyLayers: DEFAULT_DAILY_IMAGERY_IDS,
     },
     analysisProfile: {
-      layer: "MODIS_Terra_Aerosol_Optical_Depth_3km",
-      label: "MODIS Terra AOD 3km",
-      legendUrl: "https://gibs.earthdata.nasa.gov/legends/MODIS_VIIRS_AOD_H.png",
+      layerId: DEFAULT_ANALYSIS_LAYER_ID,
       percentile: 0.86,
       maxRois: 4,
       minComponentPixels: 72,
@@ -85,10 +83,10 @@ export const scenarios = [
   },
   {
     id: "urban-plume",
-    title: "三角洲城市污染羽流",
+    title: "珠三角城市污染羽流",
     type: "pollution",
     mission: "优先筛查城市污染羽流，只对高风险区域触发 PM 反演，并控制下传负载。",
-    sensor: "Himawari AHI / MODIS Terra 协同观测",
+    sensor: "VIIRS NOAA-21 / MODIS Terra 协同观测",
     defaultBudgetMin: 7,
     defaultPowerMode: "constrained",
     baseCloudCover: 0.42,
@@ -97,22 +95,18 @@ export const scenarios = [
     lowContrast: false,
     bandwidthBudgetMb: 22,
     description:
-      "污染异常呈条带扩散，且云污染接近阈值。标准流程容易在质量筛查阶段失败，适合演示插入云掩膜的修复动作。",
+      "污染异常呈条带扩散，且云污染接近阈值。标准流程容易在质量筛查阶段失败，适合展示插入云掩膜的修复动作。",
     imageryProfile: {
       label: "珠三角及沿海城市群",
       bbox: [110.2, 20.4, 117.6, 25.6],
       displayWidth: 1200,
       displayHeight: 800,
       aspectRatio: "3 / 2",
-      dailyLayer: "MODIS_Terra_CorrectedReflectance_TrueColor",
-      rapidDayLayer: "Himawari_AHI_Band3_Red_Visible_1km",
-      rapidNightLayer: "Himawari_AHI_Air_Mass",
-      rapidStartUtc: "2026-02-23T02:50:00Z",
+      dailyLayerId: DEFAULT_DAILY_IMAGERY_IDS[0],
+      dailyLayers: DEFAULT_DAILY_IMAGERY_IDS,
     },
     analysisProfile: {
-      layer: "MODIS_Terra_Aerosol_Optical_Depth_3km",
-      label: "MODIS Terra AOD 3km",
-      legendUrl: "https://gibs.earthdata.nasa.gov/legends/MODIS_VIIRS_AOD_H.png",
+      layerId: DEFAULT_ANALYSIS_LAYER_ID,
       percentile: 0.83,
       maxRois: 4,
       minComponentPixels: 60,
@@ -153,7 +147,7 @@ export const scenarios = [
     title: "暮光混合异常",
     type: "mixed",
     mission: "在短预算下判断是否值得做定量产品，必要时主动降级为异常热区简报。",
-    sensor: "Himawari AHI / MODIS Terra 协同观测",
+    sensor: "VIIRS NOAA-21 / MODIS Terra 协同观测",
     defaultBudgetMin: 5,
     defaultPowerMode: "constrained",
     baseCloudCover: 0.18,
@@ -169,15 +163,11 @@ export const scenarios = [
       displayWidth: 1000,
       displayHeight: 1000,
       aspectRatio: "1 / 1",
-      dailyLayer: "MODIS_Terra_CorrectedReflectance_TrueColor",
-      rapidDayLayer: "Himawari_AHI_Band3_Red_Visible_1km",
-      rapidNightLayer: "Himawari_AHI_Air_Mass",
-      rapidStartUtc: "2026-02-23T02:50:00Z",
+      dailyLayerId: DEFAULT_DAILY_IMAGERY_IDS[0],
+      dailyLayers: DEFAULT_DAILY_IMAGERY_IDS,
     },
     analysisProfile: {
-      layer: "MODIS_Terra_Aerosol_Optical_Depth_3km",
-      label: "MODIS Terra AOD 3km",
-      legendUrl: "https://gibs.earthdata.nasa.gov/legends/MODIS_VIIRS_AOD_H.png",
+      layerId: DEFAULT_ANALYSIS_LAYER_ID,
       percentile: 0.81,
       maxRois: 3,
       minComponentPixels: 52,
@@ -212,6 +202,43 @@ export const scenarios = [
         box: { left: 43, top: 60, width: 15, height: 14 },
       },
     ],
+  },
+  {
+    id: "indochina-hotspot",
+    title: "中南半岛热异常带",
+    type: "wildfire",
+    mission: "优先确认跨区域热异常热点，在 6 分钟内生成可下传的热点图和局部复核候选区。",
+    sensor: "VIIRS SNPP 热异常 / 真彩协同观测",
+    defaultBudgetMin: 6,
+    defaultPowerMode: "balanced",
+    baseCloudCover: 0.28,
+    baseRadiometricQuality: 0.74,
+    baseAnomalyDensity: 0.4,
+    lowContrast: false,
+    bandwidthBudgetMb: 16,
+    supportsLocalModel: false,
+    description:
+      "热异常任务更适合先用官方热点产品做区域级确认，再把少量重点热点交给后续高分复核链路，便于展示全球选区后的智能体自主演进。",
+    imageryProfile: {
+      label: "中南半岛北部至华南边界",
+      bbox: [96, 14, 108.8, 25.4],
+      displayWidth: 1200,
+      displayHeight: 800,
+      aspectRatio: "3 / 2",
+      dailyLayerId: "viirs-snpp-truecolor",
+      dailyLayers: ["viirs-snpp-truecolor", ...DEFAULT_DAILY_IMAGERY_IDS],
+    },
+    analysisProfile: {
+      layerId: "viirs-snpp-thermal-anomalies-375m",
+      percentile: 0.5,
+      maxRois: 6,
+      minComponentPixels: 2,
+      prefix: "热异常热点",
+      allowPresetFallback: false,
+      allowWindowFallback: false,
+      sampleWidth: 512,
+    },
+    fallbackRois: [],
   },
 ];
 
@@ -277,7 +304,10 @@ export function dateValueToDayIndex(value) {
 export function materializeScenarioAt(id, observationDate) {
   const base = clone(getScenarioById(id));
   const observation = new Date(observationDate);
+  const analysisLayer = getAnalysisLayerConfig(base.analysisProfile.layerId);
+  const isThermalHotspot = analysisLayer.renderMode === "thermal-hotspot";
 
+  base.baseScenarioId = base.id;
   base.cloudCover = base.baseCloudCover;
   base.radiometricQuality = base.baseRadiometricQuality;
   base.anomalyDensity = base.baseAnomalyDensity;
@@ -287,13 +317,16 @@ export function materializeScenarioAt(id, observationDate) {
     aspectRatio: base.imageryProfile.aspectRatio,
     credit: "底图来源：NASA GIBS（加载中）",
     sourceLabel: "准备加载真实遥感底图",
-    note: "将根据所选日期与时刻切换官方遥感图像。",
+    note: "将根据所选日期切换官方真彩色遥感图像。",
   };
   base.analysis = {
-    sourceLabel: base.analysisProfile.label,
-    summary: "准备基于官方气溶胶产品提取异常区域。",
-    method: "连通域聚类",
+    sourceLabel: analysisLayer.label,
+    summary: isThermalHotspot
+      ? "准备基于官方热异常产品确认热点候选区。"
+      : "准备基于官方气溶胶产品提取异常区域。",
+    method: analysisLayer.defaultMethodLabel || "连通域聚类",
     fallbackUsed: false,
+    productKind: isThermalHotspot ? "thermal-hotspot" : "continuous-anomaly",
   };
   base.observation = {
     iso: observation.toISOString(),
@@ -301,7 +334,7 @@ export function materializeScenarioAt(id, observationDate) {
     dateValue: formatDateValue(observation),
     dayIndex: dateValueToDayIndex(formatDateValue(observation)),
     hour: observation.getHours(),
-    summary: "当前将优先尝试加载官方遥感底图与 AOD 产品，再提取异常区域。",
+    summary: "当前将优先加载官方日尺度遥感底图，再叠加异常区域提取结果。",
   };
 
   return base;

@@ -50,6 +50,19 @@ export const workflowLibrary = {
       "package_alert",
     ],
   },
+  wildfire_hotspot_confirmation: {
+    id: "wildfire_hotspot_confirmation",
+    label: "热异常热点确认流程",
+    description: "优先确认官方热异常热点并生成热点图，再把重点热点留给后续局部复核链路。",
+    steps: [
+      "ingest_scene",
+      "quality_screen",
+      "detect_thermal_hotspots",
+      "prioritize_rois",
+      "generate_thermal_alert_map",
+      "package_alert",
+    ],
+  },
 };
 
 export const toolCatalog = {
@@ -67,7 +80,11 @@ export const toolCatalog = {
   },
   detect_hotspots: {
     label: "异常区域检测",
-    summary: "基于官方气溶胶产品提取高风险异常候选区。",
+    summary: "基于官方专题产品提取高风险异常候选区。",
+  },
+  detect_thermal_hotspots: {
+    label: "热异常热点确认",
+    summary: "基于官方 VIIRS 热异常产品提取热点候选簇，并保留无热点场景的空结果。",
   },
   prioritize_rois: {
     label: "重点区域排序",
@@ -92,6 +109,10 @@ export const toolCatalog = {
   generate_heatmap_only: {
     label: "生成热区结果",
     summary: "降级为异常热区产品，保留预警价值。",
+  },
+  generate_thermal_alert_map: {
+    label: "生成热点图",
+    summary: "生成热异常热点图和重点热点摘要，作为后续局部复核入口。",
   },
   package_alert: {
     label: "封装星上输出",

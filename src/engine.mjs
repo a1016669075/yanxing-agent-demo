@@ -11,6 +11,7 @@ const DOWNLINK_LIMITS = {
   balanced: 3,
   full: 4,
 };
+const MEMORY_EPISODE_LIMIT = 8;
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -25,11 +26,32 @@ function round(value, digits = 2) {
   return Math.round(value * factor) / factor;
 }
 
+function finiteNumber(value, fallback = 0) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
 function riskScore(roi, scenario) {
   return round(roi.risk * 0.55 + roi.signal * 0.35 + (1 - roi.cloud) * 0.1 + scenario.anomalyDensity * 0.1, 3);
 }
 
+function roiDetectionConfidence(roi) {
+  const explicit = Number(roi?.detectionConfidence);
+  if (Number.isFinite(explicit)) {
+    return explicit;
+  }
+  return round(clamp((Number(roi?.risk) || 0) * 0.52 + (Number(roi?.signal) || 0) * 0.48, 0, 0.99), 3);
+}
+
 function getPreferredWorkflowId(scenario, options) {
+  if (scenario.type === "wildfire") {
+    return "wildfire_hotspot_confirmation";
+  }
+
   if (scenario.radiometricQuality < 0.56) {
     return "degraded_heatmap_only";
   }
@@ -47,6 +69,117 @@ function getPreferredWorkflowId(scenario, options) {
 
 function getMemoryRules(memory, scenario) {
   return memory.rules.filter((rule) => rule.scope === scenario.type);
+}
+
+function productLabel(product) {
+  if (product === "anomaly-heatmap") {
+    return "异常热区输出";
+  }
+  if (product === "thermal-hotspot-map") {
+    return "热异常热点图";
+  }
+  return "连续反演结果";
+}
+
+function episodeSignature(entry = {}) {
+  return [
+    entry.taskId || "unknown",
+    entry.scenarioId || "unknown",
+    entry.focusSelection?.cacheKey || "preset",
+    entry.observation?.dateValue || "unknown-date",
+    String(entry.observation?.hour ?? "00"),
+    entry.outputProduct || "none",
+  ].join(":");
+}
+
+function buildEpisodeInsight(scenario, result) {
+  if (!result?.success) {
+    return "本次没有稳定产出，经验主要用于提醒后续任务避开失败路径。";
+  }
+
+  if ((result?.state?.repairs?.length ?? 0) > 0) {
+    return `执行中触发 ${result.state.repairs.length} 次策略修复，最终仍输出${productLabel(result.state.outputProduct)}。`;
+  }
+
+  if (result?.state?.outputProduct === "anomaly-heatmap") {
+    return "在质量受限条件下主动降级为热区结果，优先保证时效性和可交付性。";
+  }
+
+  if (result?.state?.outputProduct === "thermal-hotspot-map") {
+    return (result?.metrics?.processedRois ?? 0) > 0
+      ? `已确认 ${result?.metrics?.processedRois ?? 0} 个热异常热点簇，可直接进入局部复核或下游专题分析。`
+      : "当前未检出稳定热异常热点，系统保留了无告警热点图，避免伪造热点结果。";
+  }
+
+  return `对 ${result?.metrics?.processedRois ?? 0} 个重点区域完成连续反演，结果可直接进入后续解释与下传。`;
+}
+
+function buildEpisodeEntry(scenario, options, plan, result, context = {}) {
+  const observation = scenario?.observation ?? {};
+  const focusSelection = scenario?.focusSelection
+    ? {
+        label: scenario.focusSelection.label,
+        scaleLabel: scenario.focusSelection.scaleLabel,
+        scaleKey: scenario.focusSelection.scaleKey,
+        strategyText: scenario.focusSelection.strategyText,
+        cacheKey: scenario.focusSelection.cacheKey,
+        bbox: Array.isArray(scenario.focusSelection.bbox) ? [...scenario.focusSelection.bbox] : null,
+      }
+    : null;
+
+  const entry = {
+    id: [
+      context.taskId || scenario?.type || "task",
+      scenario?.id || "scenario",
+      observation.dateValue || "date",
+      String(observation.hour ?? 0).padStart(2, "0"),
+      Date.now(),
+    ].join(":"),
+    recordedAt: new Date().toISOString(),
+    taskId: context.taskId || scenario?.type || "unknown",
+    scenarioId: scenario?.id || "unknown",
+    baseScenarioId: scenario?.baseScenarioId || scenario?.id || "unknown",
+    scenarioTitle: scenario?.title || "未命名场景",
+    scenarioType: scenario?.type || "unknown",
+    observation: {
+      iso: observation.iso || null,
+      dateValue: observation.dateValue || null,
+      hour: finiteNumber(observation.hour, 0),
+    },
+    focusSelection,
+    options: {
+      budgetMin: finiteNumber(options?.budgetMin, 0),
+      powerMode: options?.powerMode || "balanced",
+      downlinkPolicy: options?.downlinkPolicy || "balanced",
+    },
+    workflow: {
+      id: plan?.workflowId || "unknown",
+      label: plan?.workflowLabel || "未命名工作流",
+    },
+    success: Boolean(result?.success),
+    outputProduct: result?.state?.outputProduct || null,
+    confidence: finiteNumber(result?.metrics?.confidence, 0),
+    processedRois: finiteNumber(result?.metrics?.processedRois, 0),
+    budgetUsage: finiteNumber(result?.metrics?.budgetUsage, 0),
+    powerUsage: finiteNumber(result?.metrics?.powerUsage, 0),
+    downlink: finiteNumber(result?.metrics?.downlink, 0),
+    repairs: Array.isArray(result?.state?.repairs) ? [...result.state.repairs] : [],
+    failures: Array.isArray(result?.state?.failures) ? [...result.state.failures] : [],
+    insight: buildEpisodeInsight(scenario, result),
+  };
+
+  return {
+    ...entry,
+    signature: episodeSignature(entry),
+  };
+}
+
+function recordMissionEpisode(memory, scenario, options, plan, result, context = {}) {
+  const entry = buildEpisodeEntry(scenario, options, plan, result, context);
+  const episodes = Array.isArray(memory?.episodes) ? memory.episodes.filter((item) => item.signature !== entry.signature) : [];
+  episodes.unshift(entry);
+  memory.episodes = episodes.slice(0, MEMORY_EPISODE_LIMIT);
+  return entry;
 }
 
 function injectMemoryGuidance(steps, memory, scenario, planNotes) {
@@ -153,6 +286,8 @@ function stepCost(stepId, scenario, roiCount) {
       return { latency: 0.62, power: 0.55 };
     case "detect_hotspots":
       return { latency: 0.72, power: 0.6 };
+    case "detect_thermal_hotspots":
+      return { latency: 0.48, power: 0.34 };
     case "prioritize_rois":
       return { latency: 0.18, power: 0.12 };
     case "dust_inversion_standard":
@@ -165,6 +300,8 @@ function stepCost(stepId, scenario, roiCount) {
       return { latency: 0.16, power: 0.1 };
     case "generate_heatmap_only":
       return { latency: 0.42, power: 0.28 };
+    case "generate_thermal_alert_map":
+      return { latency: 0.32, power: 0.22 };
     case "package_alert":
       return { latency: 0.12, power: 0.08 };
     default:
@@ -190,18 +327,23 @@ function executeStep(stepId, scenario, options, state, mode = "agent") {
   if (stepId === "quality_screen") {
     const cost = stepCost(stepId, scenario, 0);
     consume(state, cost);
-    if (state.effectiveCloud > 0.38 && !state.flags.cloudMasked) {
+    const cloudFailThreshold = scenario.type === "wildfire" ? 0.56 : 0.38;
+    const qualityFailThreshold = scenario.type === "wildfire" ? 0.34 : 0.5;
+    if (state.effectiveCloud > cloudFailThreshold && !state.flags.cloudMasked) {
       return {
         status: "failed",
         reason: "cloud_contamination",
         message: "云污染超过直接反演的安全阈值，需要先做云掩膜修复。",
       };
     }
-    if (state.effectiveQuality < 0.5) {
+    if (state.effectiveQuality < qualityFailThreshold) {
       return {
         status: "failed",
         reason: "low_radiometric_quality",
-        message: "辐射质量不足，无法稳定支撑定量反演。",
+        message:
+          scenario.type === "wildfire"
+            ? "观测质量过低，当前不宜直接进入热点确认与后续复核。"
+            : "辐射质量不足，无法稳定支撑定量反演。",
       };
     }
     return {
@@ -222,24 +364,38 @@ function executeStep(stepId, scenario, options, state, mode = "agent") {
     };
   }
 
-  if (stepId === "detect_hotspots") {
+  if (stepId === "detect_hotspots" || stepId === "detect_thermal_hotspots") {
     const cost = stepCost(stepId, scenario, 0);
     consume(state, cost);
+    const isThermalHotspotStep = stepId === "detect_thermal_hotspots";
+    const candidateThreshold = isThermalHotspotStep ? 0.5 : 0.54;
+    const detectionConfidenceThreshold = isThermalHotspotStep ? 0.44 : 0.56;
     state.candidateRois = clone(scenario.rois)
-      .map((roi) => ({ ...roi, score: riskScore(roi, scenario) }))
-      .filter((roi) => roi.score >= 0.54)
+      .map((roi) => ({
+        ...roi,
+        detectionConfidence: roiDetectionConfidence(roi),
+        score: riskScore(roi, scenario),
+      }))
+      .filter((roi) => roi.score >= candidateThreshold && roi.detectionConfidence >= detectionConfidenceThreshold)
       .sort((a, b) => b.score - a.score);
 
     if (state.candidateRois.length === 0) {
-      state.candidateRois = clone(scenario.rois)
-        .map((roi) => ({ ...roi, score: riskScore(roi, scenario) }))
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 1);
+      state.notes.push(
+        scenario.analysis?.abstentionReason || "当前没有形成稳定异常候选区，后续链路将保持空结果或主动降级。"
+      );
+      return {
+        status: "ok",
+        message: isThermalHotspotStep
+          ? `${scenario.analysis?.summary ?? "已完成热异常热点确认"} 当前未识别到稳定热异常热点。`
+          : `${scenario.analysis?.summary ?? "已完成异常检测"} 当前未识别到稳定异常候选区。`,
+      };
     }
 
     return {
       status: "ok",
-      message: `${scenario.analysis?.summary ?? "已完成异常检测"} 共识别到 ${state.candidateRois.length} 个候选异常区域。`,
+      message: isThermalHotspotStep
+        ? `${scenario.analysis?.summary ?? "已完成热异常热点确认"} 共确认到 ${state.candidateRois.length} 个热点候选簇。`
+        : `${scenario.analysis?.summary ?? "已完成异常检测"} 共识别到 ${state.candidateRois.length} 个候选异常区域。`,
     };
   }
 
@@ -260,6 +416,17 @@ function executeStep(stepId, scenario, options, state, mode = "agent") {
     stepId === "fast_roi_inversion"
   ) {
     const selected = state.selectedRois.length ? state.selectedRois : state.candidateRois;
+    if (selected.length === 0) {
+      state.processedRois = [];
+      state.outputProduct = "anomaly-heatmap";
+      state.productQuality = 0;
+      state.meanConfidence = 0;
+      return {
+        status: "ok",
+        message: "当前没有稳定异常候选区，执行链路保持空结果输出。",
+      };
+    }
+
     let roiCount = selected.length || 1;
     if (stepId === "fast_roi_inversion") {
       roiCount = Math.min(roiCount, 2);
@@ -297,7 +464,9 @@ function executeStep(stepId, scenario, options, state, mode = "agent") {
 
     state.processedRois = processed;
     state.outputProduct = "quantitative-retrieval";
-    state.productQuality = round(sum(processed.map((roi) => roi.confidence)) / processed.length);
+    state.productQuality = processed.length
+      ? round(sum(processed.map((roi) => roi.confidence)) / processed.length)
+      : 0;
     state.meanConfidence = state.productQuality;
 
     return {
@@ -335,18 +504,51 @@ function executeStep(stepId, scenario, options, state, mode = "agent") {
       confidence: round(Math.max(0.52, 0.48 + roi.risk * 0.22 + scenario.anomalyDensity * 0.12)),
     }));
     state.outputProduct = "anomaly-heatmap";
-    state.productQuality = round(sum(state.processedRois.map((roi) => roi.confidence)) / state.processedRois.length);
+    state.productQuality = state.processedRois.length
+      ? round(sum(state.processedRois.map((roi) => roi.confidence)) / state.processedRois.length)
+      : 0;
     state.meanConfidence = state.productQuality;
     return {
       status: "ok",
-      message: "已主动降级为异常热区输出，以优先保证时效性和可靠性。",
+      message: state.processedRois.length
+        ? "已主动降级为异常热区输出，以优先保证时效性和可靠性。"
+        : "当前没有稳定异常候选区，系统返回空热区结果以避免虚假报警。",
+    };
+  }
+
+  if (stepId === "generate_thermal_alert_map") {
+    const cost = stepCost(stepId, scenario, 0);
+    consume(state, cost);
+    const selected = state.selectedRois.length ? state.selectedRois : state.candidateRois;
+    state.processedRois = selected.map((roi) => ({
+      ...roi,
+      confidence: round(
+        Math.max(0.58, roi.risk * 0.3 + roi.signal * 0.28 + state.effectiveQuality * 0.22 + (1 - state.effectiveCloud) * 0.16)
+      ),
+    }));
+    state.outputProduct = "thermal-hotspot-map";
+    state.productQuality = state.processedRois.length
+      ? round(sum(state.processedRois.map((roi) => roi.confidence)) / state.processedRois.length)
+      : round(Math.max(0.52, state.effectiveQuality * 0.72 + (1 - state.effectiveCloud) * 0.18));
+    state.meanConfidence = state.productQuality;
+    return {
+      status: "ok",
+      message: state.processedRois.length
+        ? `已生成 ${state.processedRois.length} 个热异常热点簇的确认图。`
+        : "当前未检出稳定热异常热点，系统保留无告警热点图以避免虚假报警。",
     };
   }
 
   if (stepId === "package_alert") {
     const cost = stepCost(stepId, scenario, 0);
     consume(state, cost);
-    const roiPayload = Math.max(1, state.processedRois.length) * (state.outputProduct === "anomaly-heatmap" ? 1.4 : 2.5);
+    const unitPayload =
+      state.outputProduct === "anomaly-heatmap"
+        ? 1.4
+        : state.outputProduct === "thermal-hotspot-map"
+          ? 1.8
+          : 2.5;
+    const roiPayload = Math.max(1, state.processedRois.length) * unitPayload;
     state.consumedDownlink = round(Math.min(scenario.bandwidthBudgetMb, 4 + roiPayload));
     return {
       status: "ok",
@@ -492,24 +694,77 @@ function executeWorkflow(plan, scenario, options, memory, allowRepair, mode) {
 }
 
 export function createMemory() {
-  return { rules: [] };
+  return { rules: [], episodes: [] };
 }
 
-export function runAgentMission(scenario, options, memoryInput = createMemory()) {
-  const memory = clone(memoryInput);
+export function normalizeMemory(memory = {}) {
+  const source = memory && typeof memory === "object" ? memory : {};
+  return {
+    rules: Array.isArray(source.rules) ? source.rules.map((rule) => ({ ...rule })) : [],
+    episodes: Array.isArray(source.episodes) ? source.episodes.map((episode) => ({ ...episode })) : [],
+  };
+}
+
+export function findRelevantEpisodes(
+  memoryInput,
+  { taskId = null, scaleKey = null, scenarioType = null, limit = 3 } = {}
+) {
+  const memory = normalizeMemory(memoryInput);
+  return memory.episodes
+    .map((episode) => {
+      let score = 0;
+      let matchedDimensions = 0;
+      if (taskId && episode.taskId === taskId) {
+        score += 4;
+        matchedDimensions += 1;
+      }
+      if (scenarioType && episode.scenarioType === scenarioType) {
+        score += 2;
+        matchedDimensions += 1;
+      }
+      if (scaleKey && (episode.focusSelection?.scaleKey || "regional") === scaleKey) {
+        score += 2;
+        matchedDimensions += 1;
+      }
+      if (episode.success) {
+        score += 0.6;
+      }
+      if ((episode.repairs?.length ?? 0) > 0) {
+        score += 0.2;
+      }
+      return { ...episode, relevanceScore: round(score, 2), matchedDimensions };
+    })
+    .filter((episode) => episode.relevanceScore > 0 && episode.matchedDimensions > 0)
+    .sort((left, right) => {
+      if (right.relevanceScore !== left.relevanceScore) {
+        return right.relevanceScore - left.relevanceScore;
+      }
+      return String(right.recordedAt || "").localeCompare(String(left.recordedAt || ""));
+    })
+    .slice(0, limit);
+}
+
+export function runAgentMission(scenario, options, memoryInput = createMemory(), context = {}) {
+  const memory = normalizeMemory(clone(memoryInput));
   const plan = planMission(scenario, options, memory);
   const result = executeWorkflow(plan, scenario, options, memory, true, "agent");
-  return { plan, result, memory };
+  const episode = recordMissionEpisode(memory, scenario, options, plan, result, context);
+  return { plan, result, memory, episode };
 }
 
 export function runBaselineMission(scenario, options) {
   const standardStep =
-    scenario.type === "dust" ? "dust_inversion_standard" : "pollution_inversion_standard";
+    scenario.type === "wildfire"
+      ? "generate_thermal_alert_map"
+      : scenario.type === "dust"
+        ? "dust_inversion_standard"
+        : "pollution_inversion_standard";
+  const detectStep = scenario.type === "wildfire" ? "detect_thermal_hotspots" : "detect_hotspots";
 
   const plan = {
     workflowId: "fixed_script",
     workflowLabel: "固定流程基线",
-    steps: ["ingest_scene", "quality_screen", "detect_hotspots", standardStep, "package_alert"],
+    steps: ["ingest_scene", "quality_screen", detectStep, standardStep, "package_alert"],
     notes: ["固定流程采用静态处理顺序，不具备动态修复能力。"],
   };
 
@@ -525,7 +780,9 @@ export function buildNarrative(scenario, agentRun, baselineRun) {
   const productText =
     agentRun.result.state.outputProduct === "anomaly-heatmap"
       ? "最终输出被主动降级为异常热区结果，以优先保证时效性和稳定性。"
-      : "最终输出保持为定量反演结果，说明当前场景仍具备星上量化处理条件。";
+      : agentRun.result.state.outputProduct === "thermal-hotspot-map"
+        ? "最终输出保持为热异常热点图，说明系统为该任务选择了热点确认链路，而不是错误套用连续反演。"
+        : "最终输出保持为定量反演结果，说明当前场景仍具备星上量化处理条件。";
 
   return [
     `场景“${scenario.title}”的核心矛盾是预算受限，但高风险区域不能漏判。系统先接入${scenario.imagery?.sourceLabel ?? "官方遥感底图"}与${scenario.analysis?.sourceLabel ?? "异常检测工具"}，再根据任务类型和预算选流程，把算力集中到更值得处理的区域。`,
@@ -541,6 +798,8 @@ export function buildReportPayload(scenario, options, agentRun, baselineRun) {
     options,
     agentPlan: agentRun.plan,
     agentResult: agentRun.result,
+    memoryEpisode: agentRun.episode,
+    agentMemory: agentRun.memory,
     baselineResult: baselineRun,
   };
 }
