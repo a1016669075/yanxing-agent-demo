@@ -50,6 +50,40 @@ test("热异常任务即使门禁阻断也应保留规则型热点确认", () =>
   assert.match(plan.recommendedAction, /热点确认图/);
 });
 
+test("沙尘任务可路由到 Deep Blue 官方识别链", () => {
+  const plan = buildInferenceExecutionPlan({
+    recommendedModels: [
+      {
+        id: "official-deep-blue-dust-identification",
+        label: "官方 Deep Blue 沙尘识别",
+        runtimeStatus: { state: "ready" },
+      },
+    ],
+    preprocessGate: { state: "ready" },
+    taskType: "dust",
+  });
+
+  assert.equal(plan.runner, "rule_based");
+  assert.match(plan.recommendedAction, /Deep Blue/);
+});
+
+test("沙尘任务可路由到同卫星官方识别模型", () => {
+  const plan = buildInferenceExecutionPlan({
+    recommendedModels: [
+      {
+        id: "official-viirs-snpp-deep-blue-dust",
+        label: "VIIRS SNPP Deep Blue dust model",
+        runtimeStatus: { state: "ready" },
+      },
+    ],
+    preprocessGate: { state: "ready" },
+    taskType: "dust",
+  });
+
+  assert.equal(plan.runner, "rule_based");
+  assert.match(plan.recommendedAction, /同卫星沙尘/);
+});
+
 test("推理摘要会保留耗时与输出类型", () => {
   const summary = summarizeInferenceRun({
     plan: { runner: "rule_based" },
@@ -61,4 +95,20 @@ test("推理摘要会保留耗时与输出类型", () => {
 
   assert.equal(summary.elapsedMs, 129);
   assert.equal(summary.outputProduct, "anomaly-heatmap");
+});
+test("pollution task routes to the selected satellite haze model", () => {
+  const plan = buildInferenceExecutionPlan({
+    recommendedModels: [
+      {
+        id: "official-viirs-noaa20-haze-aod",
+        label: "VIIRS NOAA-20 AOD haze model",
+        runtimeStatus: { state: "ready" },
+      },
+    ],
+    preprocessGate: { state: "ready" },
+    taskType: "pollution",
+  });
+
+  assert.equal(plan.runner, "rule_based");
+  assert.match(plan.recommendedAction, /NOAA-20/);
 });

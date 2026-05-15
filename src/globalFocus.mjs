@@ -5,6 +5,20 @@ export const WORLD_BBOX = [-180, -90, 180, 90];
 const MIN_LON_SPAN = 2;
 const MIN_LAT_SPAN = 1.5;
 
+const POLLUTION_ANALYSIS_LAYER_BY_SCALE = {
+  global: "viirs-snpp-aod-dark-target-land-ocean",
+  continental: "modis-aqua-aod-3km",
+  regional: "viirs-noaa20-aod-dark-target-land-ocean",
+  local: "viirs-noaa21-aod-dark-target-land-ocean",
+};
+
+const DUST_ANALYSIS_LAYER_BY_SCALE = {
+  global: "airs-aqua-dust-score-day-analysis",
+  continental: "viirs-snpp-deep-blue-dust-aot",
+  regional: "viirs-noaa20-deep-blue-dust-aot",
+  local: "modis-terra-deep-blue-dust-aod",
+};
+
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
@@ -218,6 +232,18 @@ function buildFocusFallbackRois(taskType, scaleKey) {
   }));
 }
 
+function analysisLayerIdForFocus(taskType, scaleKey, fallbackLayerId) {
+  if (taskType === "dust") {
+    return DUST_ANALYSIS_LAYER_BY_SCALE[scaleKey] || DUST_ANALYSIS_LAYER_BY_SCALE.regional;
+  }
+
+  if (taskType === "pollution") {
+    return POLLUTION_ANALYSIS_LAYER_BY_SCALE[scaleKey] || POLLUTION_ANALYSIS_LAYER_BY_SCALE.regional;
+  }
+
+  return fallbackLayerId;
+}
+
 export function buildFocusScenario(baseTemplate, observationDate, selection) {
   const scenario = materializeScenarioAt(baseTemplate.id, observationDate);
   const bbox = normalizeFocusBbox(selection?.bbox);
@@ -242,6 +268,7 @@ export function buildFocusScenario(baseTemplate, observationDate, selection) {
   };
   scenario.analysisProfile = {
     ...clone(scenario.analysisProfile),
+    layerId: analysisLayerIdForFocus(baseTemplate.type, profile.scaleKey, scenario.analysisProfile.layerId),
     maxRois: profile.maxRois,
     minComponentPixels: profile.minComponentPixels,
     sampleWidth: profile.analysisWidth,

@@ -14,6 +14,123 @@ export const modelRegistry = [
     statusMode: "always_available",
   },
   {
+    id: "official-viirs-snpp-haze-aod",
+    label: "VIIRS SNPP AOD haze model",
+    version: "1.0.0",
+    tasks: ["pollution"],
+    sensorHints: ["VIIRS", "SNPP", "AOD", "haze"],
+    scaleRangeMeters: [750, 6000],
+    runtime: "browser",
+    outputs: ["haze ROI", "AOD anomaly map"],
+    analysisLayerId: "viirs-snpp-aod-dark-target-land-ocean",
+    description: "Strict VIIRS SNPP haze chain: SNPP AOD, SNPP true color, and SNPP CLDMSK.",
+    statusMode: "always_available",
+  },
+  {
+    id: "official-modis-aqua-haze-aod",
+    label: "MODIS Aqua AOD 3km haze model",
+    version: "1.0.0",
+    tasks: ["pollution"],
+    sensorHints: ["MODIS", "Aqua", "AOD", "haze"],
+    scaleRangeMeters: [1000, 6000],
+    runtime: "browser",
+    outputs: ["haze ROI", "AOD anomaly map"],
+    analysisLayerId: "modis-aqua-aod-3km",
+    description: "Strict MODIS Aqua haze chain: Aqua AOD 3km, Aqua true color, and MYD35.",
+    statusMode: "always_available",
+  },
+  {
+    id: "official-viirs-noaa20-haze-aod",
+    label: "VIIRS NOAA-20 AOD haze model",
+    version: "1.0.0",
+    tasks: ["pollution"],
+    sensorHints: ["VIIRS", "NOAA-20", "AOD", "haze"],
+    scaleRangeMeters: [750, 6000],
+    runtime: "browser",
+    outputs: ["haze ROI", "AOD anomaly map"],
+    analysisLayerId: "viirs-noaa20-aod-dark-target-land-ocean",
+    description: "Strict VIIRS NOAA-20 haze chain: NOAA-20 AOD, NOAA-20 true color, and NOAA-20 CLDMSK.",
+    statusMode: "always_available",
+  },
+  {
+    id: "official-viirs-noaa21-haze-aod",
+    label: "VIIRS NOAA-21 AOD haze model",
+    version: "1.0.0",
+    tasks: ["pollution"],
+    sensorHints: ["VIIRS", "NOAA-21", "AOD", "haze"],
+    scaleRangeMeters: [750, 6000],
+    runtime: "browser",
+    outputs: ["haze ROI", "AOD anomaly map"],
+    analysisLayerId: "viirs-noaa21-aod-dark-target-land-ocean",
+    description: "Strict VIIRS NOAA-21 haze chain: NOAA-21 AOD, NOAA-21 true color, and NOAA-21 CLDMSK.",
+    statusMode: "always_available",
+  },
+  {
+    id: "official-airs-aqua-dust-score",
+    label: "AIRS Aqua Dust Score dust model",
+    version: "1.0.0",
+    tasks: ["dust"],
+    sensorHints: ["AIRS", "Aqua", "Dust", "Score"],
+    scaleRangeMeters: [1000, 10000],
+    runtime: "browser",
+    outputs: ["dust ROI", "dust score anomaly map"],
+    analysisLayerId: "airs-aqua-dust-score-day-analysis",
+    description: "Strict AIRS Aqua dust chain: AIRS Dust Score, Aqua true color display, and Aqua cloud screening.",
+    statusMode: "always_available",
+  },
+  {
+    id: "official-viirs-snpp-deep-blue-dust",
+    label: "VIIRS SNPP Deep Blue dust model",
+    version: "1.0.0",
+    tasks: ["dust"],
+    sensorHints: ["VIIRS", "SNPP", "Deep Blue", "AOD", "Dust"],
+    scaleRangeMeters: [750, 6000],
+    runtime: "browser",
+    outputs: ["dust ROI", "Deep Blue dust map"],
+    analysisLayerId: "viirs-snpp-deep-blue-dust-aot",
+    description: "Strict VIIRS SNPP dust chain: SNPP Deep Blue AOT, SNPP Aerosol Type, SNPP true color, and SNPP CLDMSK.",
+    statusMode: "always_available",
+  },
+  {
+    id: "official-viirs-noaa20-deep-blue-dust",
+    label: "VIIRS NOAA-20 Deep Blue dust model",
+    version: "1.0.0",
+    tasks: ["dust"],
+    sensorHints: ["VIIRS", "NOAA-20", "Deep Blue", "AOD", "Dust"],
+    scaleRangeMeters: [750, 6000],
+    runtime: "browser",
+    outputs: ["dust ROI", "Deep Blue dust map"],
+    analysisLayerId: "viirs-noaa20-deep-blue-dust-aot",
+    description: "Strict VIIRS NOAA-20 dust chain: NOAA-20 Deep Blue AOT, NOAA-20 Aerosol Type, NOAA-20 true color, and NOAA-20 CLDMSK.",
+    statusMode: "always_available",
+  },
+  {
+    id: "official-modis-terra-deep-blue-dust",
+    label: "MODIS Terra Deep Blue dust model",
+    version: "1.0.0",
+    tasks: ["dust"],
+    sensorHints: ["MODIS", "Terra", "Deep Blue", "AOD", "Dust"],
+    scaleRangeMeters: [750, 6000],
+    runtime: "browser",
+    outputs: ["dust ROI", "Deep Blue dust map"],
+    analysisLayerId: "modis-terra-deep-blue-dust-aod",
+    description: "Strict MODIS Terra dust chain: Terra Deep Blue AOD, Terra true color, and MOD35.",
+    statusMode: "always_available",
+  },
+  {
+    id: "official-deep-blue-dust-identification",
+    label: "官方 Deep Blue 沙尘识别",
+    version: "1.0.0",
+    tasks: ["dust"],
+    sensorHints: ["AIRS", "VIIRS", "MODIS", "Deep Blue", "Aerosol", "AOD", "Dust"],
+    scaleRangeMeters: [750, 6000],
+    runtime: "browser",
+    outputs: ["沙尘概率先验", "沙尘 ROI", "稳定水体筛除"],
+    description:
+      "按框选尺度调用 AIRS Dust Score、VIIRS Deep Blue AOT/Aerosol Type 或 MODIS Terra Deep Blue AOD 的保守沙尘识别链，适合大尺度框选后的首轮筛查。",
+    statusMode: "always_available",
+  },
+  {
     id: "local-aod-inversion-net",
     label: "本地连续反演网络",
     version: "0.2.0-demo",
@@ -46,6 +163,7 @@ export const modelRegistry = [
     scaleRangeMeters: [375, 3000],
     runtime: "browser",
     outputs: ["热点簇", "热点图"],
+    analysisLayerId: "viirs-snpp-thermal-anomalies-375m",
     description: "基于官方 VIIRS 热异常专题层做热点点簇提取和空间归并，适合生成森林火/热异常确认图。",
     statusMode: "always_available",
   },
@@ -185,6 +303,16 @@ function modelScore(model, context, availability) {
     score += 5;
   }
 
+  if (context.modelId && model.id === context.modelId) {
+    score += 10;
+  }
+
+  if (context.analysisLayerId && model.analysisLayerId === context.analysisLayerId) {
+    score += 8;
+  } else if (["dust", "pollution", "wildfire"].includes(context.taskType) && model.analysisLayerId) {
+    score -= 6;
+  }
+
   score += sensorMatchScore(model, context) * 2;
 
   if (scaleMatch(model, context)) {
@@ -197,6 +325,10 @@ function modelScore(model, context, availability) {
 
   if (context.taskType === "wildfire" && model.id === "official-thermal-hotspot-clustering") {
     score += 4;
+  }
+
+  if (context.taskType === "dust" && model.id === "official-deep-blue-dust-identification") {
+    score += 5;
   }
 
   if (context.radiometricQuality >= 0.6 && model.id === "local-aod-inversion-net") {

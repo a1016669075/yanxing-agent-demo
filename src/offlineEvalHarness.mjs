@@ -38,6 +38,7 @@ export function evaluateOfflineRun({
   const benchmarkCatalog = summarizeBenchmarkCatalog();
   const reviewedCaseCatalog = summarizeReviewedBenchmarkCases();
   const caseAccuracy = evaluateReviewedBenchmarkCase({ scenario, predictedRois: scenario?.rois || [] });
+  const fireOverlay = scenario?.analysis?.fireOverlay || null;
   const preprocessScore = clamp(
     ((preprocessGate?.validPixelRatio ?? 1 - scenario.cloudCover * 0.82) * 100 +
       (preprocessGate?.effectiveQuality ?? scenario.radiometricQuality) * 100) /
@@ -107,6 +108,37 @@ export function evaluateOfflineRun({
     benchmarkCatalog,
     reviewedCaseCatalog,
     caseAccuracy,
+    wildfireTemporalMetrics:
+      benchmarkTaskId === "wildfire" && fireOverlay
+        ? fireOverlay.metrics || null
+        : null,
+    timeParityReport:
+      benchmarkTaskId === "wildfire" && fireOverlay
+        ? fireOverlay.timeParityReport || null
+        : null,
+    temporalTrace:
+      benchmarkTaskId === "wildfire" && fireOverlay
+        ? fireOverlay.temporalTrace || null
+        : null,
+    beforeAfterClusterComparison:
+      benchmarkTaskId === "wildfire" && fireOverlay
+        ? fireOverlay.beforeAfterClusterComparison || null
+        : null,
+    knownTemporalLimitations:
+      benchmarkTaskId === "wildfire" && fireOverlay
+        ? fireOverlay.knownTemporalLimitations || []
+        : [],
+    fireSource:
+      benchmarkTaskId === "wildfire" && fireOverlay
+        ? {
+            providerId: fireOverlay.providerId || fireOverlay.source || "firms",
+            queryMode: fireOverlay.queryMode || fireOverlay.config?.mode || "nrt",
+            benchmarkMode: fireOverlay.benchmarkMode || null,
+            products: fireOverlay.products || fireOverlay.config?.products || [],
+            pointCount: fireOverlay.summary?.pointCount || 0,
+            clusterCount: fireOverlay.summary?.clusterCount || 0,
+          }
+        : null,
     findings,
     generatedAt: new Date().toISOString(),
   };

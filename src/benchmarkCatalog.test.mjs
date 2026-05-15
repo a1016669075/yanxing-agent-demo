@@ -12,14 +12,16 @@ test("benchmark catalog summary reports total entries and task coverage", () => 
 
   assert.equal(summary.total, benchmarkCatalog.length);
   assert.ok(summary.taskCount >= 5);
-  assert.ok(summary.ready >= 1);
+  assert.equal(summary.ready, 0);
+  assert.ok(summary.candidate >= 1);
 });
 
-test("wildfire benchmark coverage exposes at least one ready benchmark", () => {
+test("wildfire benchmark coverage keeps FIRMS as a candidate benchmark", () => {
   const coverage = benchmarkCoverageForTask("wildfire", benchmarkCatalog);
 
   assert.equal(coverage.taskId, "wildfire");
   assert.ok(coverage.total >= 1);
-  assert.ok(coverage.ready >= 1);
+  assert.equal(coverage.ready, 0);
+  assert.ok(coverage.candidate >= 1);
   assert.ok(coverage.labels.includes("NASA FIRMS VIIRS hotspots"));
 });

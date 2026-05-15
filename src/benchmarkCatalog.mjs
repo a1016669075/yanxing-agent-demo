@@ -36,9 +36,9 @@ export const benchmarkCatalog = [
     annotationType: "point-hotspot",
     sensors: ["VIIRS SNPP", "VIIRS NOAA-20/21"],
     coverage: "global",
-    status: "ready",
+    status: "candidate",
     role: "operational-benchmark",
-    note: "Ready-to-use hotspot benchmark for wildfire confirmation, cloud-over-fire false positives, and hotspot confidence checks.",
+    note: "Candidate operational source for wildfire confirmation, but temporal consistency, negative scenes, and static-source traps still need dedicated replay gates before it can be treated as a mature benchmark.",
   },
   {
     id: "flood-sen1floods11",

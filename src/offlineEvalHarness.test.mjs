@@ -42,7 +42,7 @@ test("离线评测会输出总体分数与结论", () => {
   assert.ok(["ready", "promising", "needs-hardening"].includes(report.verdict));
   assert.equal(report.findings.length, 5);
   assert.equal(report.benchmarkCoverage.taskId, "wildfire");
-  assert.ok(report.benchmarkCoverage.ready >= 1);
+  assert.ok(report.benchmarkCoverage.candidate >= 1);
   assert.ok(report.benchmarkCatalog.total >= report.benchmarkCoverage.total);
   assert.ok(report.reviewedCaseCatalog.total >= 1);
   assert.equal(report.caseAccuracy.available, true);

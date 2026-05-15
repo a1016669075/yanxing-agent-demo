@@ -1,0 +1,3 @@
+latitude,longitude,acq_date,acq_time,satellite,instrument,confidence,frp,daynight,scan,track
+38.5001,-121.3002,2025-08-15,1210,N,VIIRS,n,18.4,D,0.38,0.42
+38.5010,-121.3010,2025-08-15,1214,N,VIIRS,h,26.1,D,0.38,0.42

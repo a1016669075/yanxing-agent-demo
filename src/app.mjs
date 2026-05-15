@@ -125,6 +125,21 @@ import { buildPlanningMissionSnapshot } from "./taskPlanning.mjs";
 import { buildOperationalResultInterpretation } from "./resultInterpretation.mjs";
 import { buildOverlayPointsFromRois, clipOverlayPointsToValidRegion } from "./anomalyOverlay.mjs";
 import { buildAnomalyMarkerModel } from "./anomalySemiology.mjs";
+import {
+  FEATURE_FLAGS_KEY,
+  isFeatureEnabled,
+  normalizeFeatureFlags,
+  setFeatureFlag,
+} from "./featureFlags.mjs";
+import { wildfireProviderCatalog } from "./firmsProvider.mjs";
+import {
+  GEO_MEMORY_KEY,
+  createGeoMemory,
+  normalizeGeoMemory,
+  summarizeGeoMemory,
+} from "./geoMemory.mjs";
+import { runEvidencePlannerMission } from "./evidencePlanner.mjs";
+import { runEvidenceBenchmarkSuite } from "./evidenceBenchmark.mjs";
 
 const scenarioSelect = document.querySelector("#scenarioSelect");
 const taskTypeSelect = document.querySelector("#taskTypeSelect");
@@ -157,6 +172,7 @@ const agentLoopPanel = document.querySelector("#agentLoopPanel");
 
 const overlayToggle = document.querySelector("#overlayToggle");
 const decloudPreviewToggle = document.querySelector("#decloudPreviewToggle");
+const fireOverlayControls = document.querySelector("#fireOverlayControls");
 const dateInput = document.querySelector("#dateInput");
 const dateSlider = document.querySelector("#dateSlider");
 const hourSlider = document.querySelector("#hourSlider");
@@ -271,6 +287,17 @@ const ARTIFACT_INDEX_KEY = artifactIndexKey;
 const LOCAL_WORKBENCH_ENABLED = isLocalHostname(window.location.hostname);
 const SCENE_CACHE_LIMIT = 18;
 const DECISION_PREVIEW_CACHE_LIMIT = 24;
+const FIRE_OVERLAY_WINDOW_OPTIONS = [
+  { dayRange: 1, label: "最近24h" },
+  { dayRange: 3, label: "最近72h" },
+  { dayRange: 7, label: "最近7d" },
+];
+const FIRE_OVERLAY_PRODUCT_OPTIONS = [
+  { id: "VIIRS_NOAA21_NRT", label: "NOAA-21" },
+  { id: "VIIRS_NOAA20_NRT", label: "NOAA-20" },
+  { id: "VIIRS_SNPP_NRT", label: "SNPP" },
+  { id: "MODIS_NRT", label: "MODIS" },
+];
 
 const STATUS_LABELS = {
   planned: "待执行",
@@ -295,6 +322,7 @@ const DOWNLINK_LABELS = {
 const PRODUCT_LABELS = {
   "quantitative-retrieval": "定量反演结果",
   "anomaly-heatmap": "异常热区结果",
+  "dust-identification-map": "沙尘识别结果",
   "thermal-hotspot-map": "热异常热点图",
 };
 
@@ -348,8 +376,19 @@ let latestAlignmentPlan = null;
 let latestJsonTileBundle = null;
 let latestVectorTilePreview = null;
 let latestEvalReport = null;
+let latestEvidencePlannerRun = null;
+let latestTrajectoryBenchmark = null;
 let queueTickTimer = null;
 let workbenchBootstrapped = false;
+let currentFeatureFlags = LOCAL_WORKBENCH_ENABLED
+  ? (() => {
+      try {
+        return normalizeFeatureFlags(JSON.parse(localStorage.getItem(FEATURE_FLAGS_KEY) || "null"));
+      } catch {
+        return normalizeFeatureFlags();
+      }
+    })()
+  : normalizeFeatureFlags();
 let currentSurfaceMode = resolveSurfaceMode({
   hostname: window.location.hostname,
   storedMode: LOCAL_WORKBENCH_ENABLED ? localStorage.getItem(SURFACE_MODE_KEY) : null,
@@ -364,6 +403,11 @@ let globalViewport = createGlobalViewportState();
 let globalInteractionMode = "select";
 let latestSceneLoadSummary = null;
 let latestSceneOverlayDiagnostics = null;
+let currentFireOverlayDayRange = wildfireProviderCatalog.firms.defaultWindowDays;
+let currentFireOverlayProducts = [...wildfireProviderCatalog.firms.defaultProducts];
+let currentFireOverlayIncludeLowConfidence = false;
+let currentFireOverlayUseWmsTimeOverlay = false;
+let currentFireOverlayPopup = null;
 
 const sceneCache = new Map();
 const decisionPreviewCache = new Map();
@@ -379,6 +423,26 @@ function readMemory() {
 
 function writeMemory(memory) {
   localStorage.setItem(MEMORY_KEY, JSON.stringify(normalizeMemory(memory)));
+}
+
+function readGeoMemory() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(GEO_MEMORY_KEY) || "null");
+    return normalizeGeoMemory(parsed);
+  } catch {
+    return createGeoMemory();
+  }
+}
+
+function writeGeoMemory(memory) {
+  localStorage.setItem(GEO_MEMORY_KEY, JSON.stringify(normalizeGeoMemory(memory)));
+}
+
+function writeFeatureFlags(flags) {
+  currentFeatureFlags = normalizeFeatureFlags(flags);
+  if (LOCAL_WORKBENCH_ENABLED) {
+    localStorage.setItem(FEATURE_FLAGS_KEY, JSON.stringify(currentFeatureFlags));
+  }
 }
 
 function readArtifactIndex() {
@@ -411,8 +475,22 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 function formatPercent(value) {
   return `${Math.round(value * 100)}%`;
+}
+
+function formatOptionalPercent(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? formatPercent(numeric) : "未知";
 }
 
 function formatShortDate(date) {
@@ -464,6 +542,297 @@ function canUseWorkbench() {
   return LOCAL_WORKBENCH_ENABLED;
 }
 
+function isWorkbenchSurface() {
+  return selectedSurfaceMode() === "workbench";
+}
+
+function isWildfireScenario(scenario = null) {
+  const candidate = scenario ?? baseScenario();
+  return candidate?.type === "wildfire";
+}
+
+function normalizeFireOverlayProducts(products = wildfireProviderCatalog.firms.defaultProducts) {
+  const allowed = new Set(wildfireProviderCatalog.firms.products);
+  const normalized = (Array.isArray(products) ? products : [])
+    .map((item) => String(item || "").trim())
+    .filter((item) => allowed.has(item));
+  return normalized.length ? [...new Set(normalized)] : [...wildfireProviderCatalog.firms.defaultProducts];
+}
+
+function currentFireDetectionProfile(template = baseScenario()) {
+  if (template?.type !== "wildfire") {
+    return null;
+  }
+
+  const templateProfile =
+    template.fireDetectionProfile && typeof template.fireDetectionProfile === "object"
+      ? template.fireDetectionProfile
+      : {};
+
+  return {
+    provider: "firms",
+    mode: templateProfile.mode === "standard" ? "standard" : "nrt",
+    dayRange: currentFireOverlayDayRange,
+    products: isWorkbenchSurface()
+      ? normalizeFireOverlayProducts(currentFireOverlayProducts)
+      : normalizeFireOverlayProducts(templateProfile.products),
+    includeLowConfidence: isWorkbenchSurface() ? currentFireOverlayIncludeLowConfidence : false,
+    useWmsTimeOverlay: isWorkbenchSurface() ? currentFireOverlayUseWmsTimeOverlay : false,
+  };
+}
+
+function fireOverlayProfileKey(profile = null) {
+  if (!profile) {
+    return "none";
+  }
+
+  return [
+    profile.provider || "firms",
+    profile.mode || "nrt",
+    profile.dayRange || 1,
+    profile.includeLowConfidence ? "low" : "nominal",
+    profile.useWmsTimeOverlay ? "wms" : "plain",
+    normalizeFireOverlayProducts(profile.products).join(","),
+  ].join(":");
+}
+
+function describeFireConfidenceFilter(profile = null) {
+  return profile?.includeLowConfidence ? "low/nominal/high" : "nominal/high";
+}
+
+function formatFireOverlayTime(value) {
+  if (!value) {
+    return "unknown";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(
+    date.getUTCDate()
+  ).padStart(2, "0")} ${String(date.getUTCHours()).padStart(2, "0")}:${String(date.getUTCMinutes()).padStart(
+    2,
+    "0"
+  )} UTC`;
+}
+
+function fireProductLabel(productId = "") {
+  return FIRE_OVERLAY_PRODUCT_OPTIONS.find((item) => item.id === productId)?.label || productId;
+}
+
+function normalizeFirePopupState(nextState = null) {
+  if (!nextState?.kind || !nextState?.id) {
+    return null;
+  }
+  return {
+    kind: String(nextState.kind),
+    id: String(nextState.id),
+  };
+}
+
+function setFireOverlayPopup(nextState = null) {
+  currentFireOverlayPopup = normalizeFirePopupState(nextState);
+}
+
+function resetFireOverlayPopup() {
+  currentFireOverlayPopup = null;
+}
+
+function resetFireOverlayControls(template = baseScenario()) {
+  const templateProfile =
+    template?.fireDetectionProfile && typeof template.fireDetectionProfile === "object"
+      ? template.fireDetectionProfile
+      : {};
+  currentFireOverlayDayRange = [1, 3, 5, 7].includes(Number(templateProfile.dayRange))
+    ? Number(templateProfile.dayRange)
+    : wildfireProviderCatalog.firms.defaultWindowDays;
+  currentFireOverlayProducts = normalizeFireOverlayProducts(templateProfile.products);
+  currentFireOverlayIncludeLowConfidence = Boolean(templateProfile.includeLowConfidence);
+  currentFireOverlayUseWmsTimeOverlay = Boolean(templateProfile.useWmsTimeOverlay);
+  resetFireOverlayPopup();
+}
+
+function percentFromBbox(value, min, max) {
+  if (!Number.isFinite(value) || !Number.isFinite(min) || !Number.isFinite(max) || max <= min) {
+    return 50;
+  }
+  return clamp(((value - min) / (max - min)) * 100, 0, 100);
+}
+
+function buildFireDetectionDisplayModel(fireOverlay = null) {
+  const bbox = Array.isArray(fireOverlay?.bbox) && fireOverlay.bbox.length === 4 ? fireOverlay.bbox : null;
+  if (!bbox) {
+    return {
+      detections: [],
+      clusters: [],
+      popup: null,
+    };
+  }
+
+  const [west, south, east, north] = bbox;
+  const detections = (Array.isArray(fireOverlay?.detections) ? fireOverlay.detections : []).map((item) => {
+    const x = percentFromBbox(Number(item.lon), west, east);
+    const y = 100 - percentFromBbox(Number(item.lat), south, north);
+    return {
+      ...item,
+      display: {
+        x,
+        y,
+      },
+    };
+  });
+  const clusters = Array.isArray(fireOverlay?.clusters) ? fireOverlay.clusters : [];
+  const popupState = currentFireOverlayPopup;
+  let popup = null;
+
+  if (popupState?.kind === "point") {
+    const point = detections.find((item) => item.id === popupState.id);
+    if (point) {
+      popup = {
+        kind: "point",
+        id: point.id,
+        x: point.display.x,
+        y: point.display.y,
+        title: `${point.satellite} ${point.product}`.trim(),
+        lines: [
+          `time · ${formatFireOverlayTime(point.acqTimeUtc)}`,
+          `sensor · ${point.sensor || point.product || "unknown"}`,
+          `source · ${point.source}`,
+          `confidence · ${point.confidence?.label || point.confidence?.level || "unknown"}`,
+          `temporal class · ${point.temporal_class || "unknown"}`,
+          `FRP · ${point.frpMw == null ? "n/a" : `${point.frpMw} MW`}`,
+          `daynight · ${point.daynight || "unknown"}`,
+        ],
+      };
+    }
+  } else if (popupState?.kind === "cluster") {
+    const cluster = clusters.find((item) => item.id === popupState.id);
+    if (cluster) {
+      popup = {
+        kind: "cluster",
+        id: cluster.id,
+        x: cluster.display?.x ?? 50,
+        y: cluster.display?.y ?? 50,
+        title: `${cluster.count} fire points / ${cluster.products.join(", ")}`,
+        lines: [
+          `time · ${formatFireOverlayTime(cluster.acqTimeStartUtc)} -> ${formatFireOverlayTime(cluster.acqTimeEndUtc)}`,
+          `source · NASA FIRMS cluster`,
+          `status · ${cluster.status || "unknown"}`,
+          `temporal span · ${cluster.temporalSpanMin == null ? "n/a" : `${cluster.temporalSpanMin} min`}`,
+          `event score · ${cluster.eventScore == null ? "n/a" : cluster.eventScore.toFixed(3)}`,
+          `confidence · ${cluster.confidence?.label || cluster.confidence?.level || "unknown"}`,
+          `FRP · ${cluster.totalFrpMw == null ? "n/a" : `${cluster.totalFrpMw} MW`}`,
+          `daynight · ${cluster.daynight || "mixed"}`,
+        ],
+      };
+    }
+  }
+
+  return {
+    detections,
+    clusters,
+    popup,
+  };
+}
+
+function renderFireOverlayControls(scenario = latestObservedScenario ?? buildScenarioSnapshot()) {
+  if (!fireOverlayControls) {
+    return;
+  }
+
+  const candidate = scenario ?? buildScenarioSnapshot();
+  if (!isWildfireScenario(candidate)) {
+    fireOverlayControls.hidden = true;
+    fireOverlayControls.innerHTML = "";
+    return;
+  }
+
+  const profile = currentFireDetectionProfile(baseScenario());
+  const fireOverlay = candidate?.analysis?.fireOverlay || null;
+  const surfaceLabel = isWorkbenchSurface() ? "Workbench" : "Showcase";
+  const sourceModeLabel = fireOverlay?.sourceMode === "local_cache" ? "local_cache" : "live_official";
+  const queryPlanLabel =
+    fireOverlay?.config?.queryPlanLabel || (profile.dayRange === 7 ? "7d via stitched FIRMS slices" : null);
+  const summary = fireOverlay?.available
+    ? `${sourceModeLabel} ${fireOverlay.config?.windowLabel || `${profile.dayRange}d`} · ${fireOverlay.summary?.pointCount || 0} points / ${fireOverlay.summary?.clusterCount || 0} clusters · ${describeFireConfidenceFilter(profile)}${queryPlanLabel ? ` · ${queryPlanLabel}` : ""}`
+    : fireOverlay?.reason
+      ? `FIRMS unavailable (${fireOverlay.reason}), fallback to current thermal workflow`
+      : `Wildfire stage-1 uses FIRMS official fire points by default · ${describeFireConfidenceFilter(profile)}${queryPlanLabel ? ` · ${queryPlanLabel}` : ""}`;
+  const latestTime = fireOverlay?.latestAcqTimeUtc ? formatFireOverlayTime(fireOverlay.latestAcqTimeUtc) : null;
+
+  fireOverlayControls.hidden = false;
+  fireOverlayControls.innerHTML = `
+    <div class="fire-overlay-panel">
+      <div class="fire-overlay-head">
+        <div>
+          <span>Wildfire Fire Source</span>
+          <strong>${sourceModeLabel}</strong>
+        </div>
+        <p>${summary}${latestTime ? ` · latest ${latestTime}` : ""}</p>
+      </div>
+      <div class="fire-overlay-chip-row">
+        ${FIRE_OVERLAY_WINDOW_OPTIONS.map(
+          (option) => `
+            <button
+              type="button"
+              class="fire-overlay-chip ${profile.dayRange === option.dayRange ? "is-active" : ""}"
+              data-fire-window="${option.dayRange}"
+              aria-pressed="${String(profile.dayRange === option.dayRange)}"
+            >
+              ${option.label}
+            </button>
+          `
+        ).join("")}
+      </div>
+      ${
+        isWorkbenchSurface()
+          ? `
+            <div class="fire-overlay-product-grid">
+              ${FIRE_OVERLAY_PRODUCT_OPTIONS.map(
+                (option) => `
+                  <label class="fire-overlay-option">
+                    <input
+                      type="checkbox"
+                      data-fire-product="${option.id}"
+                      ${profile.products.includes(option.id) ? "checked" : ""}
+                    />
+                    <span>${option.label}</span>
+                  </label>
+                `
+              ).join("")}
+            </div>
+            <div class="fire-overlay-chip-row">
+              <label class="fire-overlay-option">
+                <input type="checkbox" data-fire-low-confidence ${profile.includeLowConfidence ? "checked" : ""} />
+                <span>include low confidence</span>
+              </label>
+              <label class="fire-overlay-option">
+                <input type="checkbox" data-fire-wms-time ${profile.useWmsTimeOverlay ? "checked" : ""} />
+                <span>show WMS-Time overlay</span>
+              </label>
+            </div>
+          `
+          : `
+            <div class="fire-overlay-footnote">
+              <span>${surfaceLabel} defaults to nominal/high confidence only.</span>
+              <strong>${profile.products.map((item) => fireProductLabel(item)).join(" · ")}</strong>
+              ${queryPlanLabel ? `<span>${queryPlanLabel}</span>` : ""}
+            </div>
+          `
+      }
+    </div>
+  `;
+}
+
+function refreshAfterFireOverlayControlChange() {
+  resetFireOverlayPopup();
+  invalidateObservedScenario();
+  clearResultPanels();
+  resetDataAccessPanels();
+  renderFireOverlayControls();
+  scheduleScenarioPreview();
+}
+
 function persistSurfaceMode(mode) {
   if (!canUseWorkbench()) {
     return;
@@ -512,9 +881,17 @@ function currentObservation() {
 function buildScenarioSnapshot(observation = currentObservation()) {
   const template = baseScenario();
   if (activeGlobalSelection?.bbox) {
-    return buildFocusScenario(template, observation, activeGlobalSelection);
+    const snapshot = buildFocusScenario(template, observation, activeGlobalSelection);
+    if (snapshot.type === "wildfire") {
+      snapshot.fireDetectionProfile = currentFireDetectionProfile(template);
+    }
+    return snapshot;
   }
-  return materializeScenarioAt(template.id, observation);
+  const snapshot = materializeScenarioAt(template.id, observation);
+  if (snapshot.type === "wildfire") {
+    snapshot.fireDetectionProfile = currentFireDetectionProfile(template);
+  }
+  return snapshot;
 }
 
 function activeSelectionSummary(selection = activeGlobalSelection) {
@@ -548,6 +925,7 @@ function invalidateObservedScenario() {
   latestObservedScenario = null;
   latestObservedScenarioIntent = "preview";
   latestSceneOverlayDiagnostics = null;
+  resetFireOverlayPopup();
 }
 
 function scenarioForAgentExecution(scenario, gate) {
@@ -590,7 +968,9 @@ function recommendedModelSummary(scenario) {
   const recommended = recommendModels(
     {
       taskType: scenario.type,
-      sensorText: scenario.sensor,
+      analysisLayerId: scenario.analysisProfile?.layerId || null,
+      modelId: scenario.analysis?.pollutionModel?.id || scenario.analysis?.dustModel?.id || scenario.analysis?.thermalModel?.id || null,
+      sensorText: `${scenario.sensor || ""} ${scenario.analysis?.sourceLabel || ""}`,
       scaleMeters: estimateSceneScaleMeters(scenario),
       radiometricQuality: scenario.radiometricQuality,
       staticPredictionAvailable: availability["static-scene-prediction"].available,
@@ -599,6 +979,10 @@ function recommendedModelSummary(scenario) {
   );
 
   return recommended[0] ?? null;
+}
+
+function evidencePlannerEnabled() {
+  return isFeatureEnabled(currentFeatureFlags, "agenticEvidencePlanner");
 }
 
 function renderAgentDecisionPanel(
@@ -652,6 +1036,17 @@ function renderAgentDecisionPanel(
       productLabel,
     },
   });
+  const plannerDebug =
+    selectedSurfaceMode() === "workbench" && report?.evidencePlanner
+      ? `
+        <details class="brief-card planner-debug-card">
+          <summary>Evidence Planner Debug</summary>
+          <pre class="planner-debug-output">${escapeHtml(
+            JSON.stringify(report.evidencePlanner, null, 2)
+          )}</pre>
+        </details>
+      `
+      : "";
 
   agentDecisionPanel.innerHTML = `
     ${snapshot.cards
@@ -669,6 +1064,7 @@ function renderAgentDecisionPanel(
       <span>${snapshot.note.title}</span>
       <p>${snapshot.note.detail}</p>
     </div>
+    ${plannerDebug}
   `;
 
   renderAgentLoopPanel(scenario, options, {
@@ -754,6 +1150,7 @@ function renderShowcaseSummary(scenario = latestObservedScenario ?? buildScenari
 
   const task = currentTask();
   const report = reportMatchesScenario(scenario) ? latestReport : null;
+  const plannerSummary = report?.evidencePlanner || null;
   const gate =
     latestPreprocessGate ??
     evaluatePreprocessGate({
@@ -787,6 +1184,25 @@ function renderShowcaseSummary(scenario = latestObservedScenario ?? buildScenari
     : currentTaskMode() === "planning"
       ? "当前任务将先生成规划方案，再决定是否进入真实执行链路。"
       : "当前摘要基于预览态，正式演示时可直接点击开始演示进入执行链。";
+  const plannerCards = plannerSummary
+    ? `
+      <article class="brief-card showcase-card evidence-planner-card">
+        <span>Evidence Path</span>
+        <strong>${plannerSummary.evidencePath?.length || 0} steps</strong>
+        <p>${plannerSummary.evidencePath?.length ? plannerSummary.evidencePath.slice(0, 3).map((step) => step.selectedAction).join(" -> ") : "褰撳墠鍏堜繚鎸佸浐瀹?workflow锛屾湭褰㈡垚棰濆 evidence path銆?"}</p>
+      </article>
+      <article class="brief-card showcase-card evidence-planner-card">
+        <span>Why this context</span>
+        <strong>${plannerSummary.stopReason || "context selected"}</strong>
+        <p>${plannerSummary.whyThisContext || "planner 鏈緭鍑轰笂涓嬫枃閫夋嫨璇存槑銆?"}</p>
+      </article>
+      <article class="brief-card showcase-card evidence-planner-card">
+        <span>State Delta</span>
+        <strong>${Math.round((plannerSummary.uncertainty ?? 0.5) * 100)}% uncertainty</strong>
+        <p>${plannerSummary.stateDelta || "鐘舵€佸彉鍖栨憳瑕佸皢鍦ㄦ湁 planner run 鍚庢樉绀恒€?"}</p>
+      </article>
+    `
+    : "";
 
   showcaseSummary.innerHTML = `
     <div class="showcase-summary-grid">
@@ -810,6 +1226,7 @@ function renderShowcaseSummary(scenario = latestObservedScenario ?? buildScenari
         <strong>${outputLabel}</strong>
         <p>结果可信度 ${confidenceLabel} · ${nextActionDetail}</p>
       </article>
+      ${plannerCards}
     </div>
   `;
 }
@@ -818,6 +1235,7 @@ function renderCapabilityPanel(scenario = latestObservedScenario ?? buildScenari
   const summary = summarizeTaskCatalog(taskCatalog);
   const scaleKey = scenario.focusSelection?.scaleKey || "regional";
   const task = currentTask();
+  const report = latestReport ?? {};
   const selectedCapability = capabilityForTask(task.id, scaleKey);
   const showcaseMode = selectedSurfaceMode() === "showcase";
   const tasksForDisplay = showcaseMode ? taskCatalog.filter((entry) => entry.id === task.id) : taskCatalog;
@@ -844,8 +1262,24 @@ function renderCapabilityPanel(scenario = latestObservedScenario ?? buildScenari
         <strong>${selectedCapability?.label || "等待选择任务"}</strong>
         <p>${selectedCapability?.recommendedStrategy || "智能体会根据当前区域尺度自动匹配更合适的数据和模型链路。"} 所有定量模型默认都在去云后的有效区域上执行。</p>
       </div>
+      <div class="brief-card">
+        <span>Trajectory Benchmark</span>
+        <strong>${report.trajectoryBenchmark?.arms?.length || 0} arms</strong>
+        <p>${
+          report.trajectoryBenchmark?.arms?.length
+            ? report.trajectoryBenchmark.arms
+                .map((arm) => `${arm.label}:${arm.evidencePathLength || 0}`)
+                .join(" 路 ")
+            : "鏈繍琛?planner benchmark"
+        }</p>
+      </div>
     </div>
   `;
+  capabilitySummary.querySelectorAll(".brief-card").forEach((card) => {
+    if (card.querySelector("span")?.textContent === "Trajectory Benchmark") {
+      card.remove();
+    }
+  });
 
   capabilityBoard.innerHTML = `
     <div class="capability-card-grid">
@@ -1198,13 +1632,19 @@ function applyGlobalSelectionState(selection) {
   scheduleScenarioPreview();
 }
 
-function clearGlobalSelection() {
+function resetGlobalSelectionState({ resetViewport = false } = {}) {
   pendingGlobalSelection = null;
   activeGlobalSelection = null;
   globalSelectionDraft = null;
   globalPanDrag = null;
-  globalViewport = createGlobalViewportState();
-  globalInteractionMode = "select";
+  if (resetViewport) {
+    globalViewport = createGlobalViewportState();
+    globalInteractionMode = "select";
+  }
+}
+
+function clearGlobalSelection() {
+  resetGlobalSelectionState({ resetViewport: true });
   invalidateObservedScenario();
   clearResultPanels();
   resetDataAccessPanels();
@@ -2603,7 +3043,9 @@ function renderModelRegistryPanel(scenario = activeRoiDrawingScenario(), runtime
   const recommended = recommendModels(
     {
       taskType: scenario.type,
-      sensorText: scenario.sensor,
+      analysisLayerId: scenario.analysisProfile?.layerId || null,
+      modelId: scenario.analysis?.pollutionModel?.id || scenario.analysis?.dustModel?.id || scenario.analysis?.thermalModel?.id || null,
+      sensorText: `${scenario.sensor || ""} ${scenario.analysis?.sourceLabel || ""}`,
       scaleMeters: estimateSceneScaleMeters(scenario),
       radiometricQuality: scenario.radiometricQuality,
       staticPredictionAvailable: availability["static-scene-prediction"].available,
@@ -2926,7 +3368,9 @@ async function currentRecommendedModelsSnapshot(scenario) {
   const recommended = recommendModels(
     {
       taskType: scenario.type,
-      sensorText: scenario.sensor,
+      analysisLayerId: scenario.analysisProfile?.layerId || null,
+      modelId: scenario.analysis?.pollutionModel?.id || scenario.analysis?.dustModel?.id || scenario.analysis?.thermalModel?.id || null,
+      sensorText: `${scenario.sensor || ""} ${scenario.analysis?.sourceLabel || ""}`,
       scaleMeters: estimateSceneScaleMeters(scenario),
       radiometricQuality: scenario.radiometricQuality,
       staticPredictionAvailable: availability["static-scene-prediction"].available,
@@ -3070,17 +3514,39 @@ async function runInferenceRunnerPanel() {
       sourceLabel = "门禁阻断后降级";
       note = "由于预处理门禁未通过，当前只保留少量热区结果。";
     } else {
+      const dustModelSelected =
+        scenario.type === "dust" &&
+        (plan.modelId === "official-deep-blue-dust-identification" ||
+          [
+            "official-airs-aqua-dust-score",
+            "official-viirs-snpp-deep-blue-dust",
+            "official-viirs-noaa20-deep-blue-dust",
+            "official-modis-terra-deep-blue-dust",
+          ].includes(plan.modelId));
       outputProduct =
         scenario.type === "wildfire"
           ? "thermal-hotspot-map"
+          : dustModelSelected
+            ? "dust-identification-map"
           : latestPreprocessGate?.state === "warn"
             ? "anomaly-heatmap"
             : "quantitative-retrieval";
-      sourceLabel = scenario.type === "wildfire" ? "官方热异常专题结果" : "官方 AOD 连通域结果";
-      note =
-        scenario.type === "wildfire"
-          ? "当前直接复用页面已有热点簇结果，生成最小热点确认输出。"
-          : "当前直接复用页面已有异常 ROI 作为最小推理输出。";
+      sourceLabel = scenario.type === "wildfire"
+        ? "官方热异常专题结果"
+        : dustModelSelected
+          ? "官方同卫星沙尘识别结果"
+          : "官方 AOD 连通域结果";
+      if (scenario.type === "wildfire") {
+        note = "当前直接复用页面已有热点簇结果，生成最小热点确认输出。";
+      } else if (dustModelSelected) {
+        const support = scenario.analysis?.dustSupport;
+        const screening = scenario.analysis?.dustScreening;
+        note = `当前复用页面已生成的沙尘 ROI，并保留同卫星沙尘识别证据链。${
+          support ? ` 沙尘支持像元 ${formatOptionalPercent(support.supportRatio)}，来源 ${support.sourceLabel}。` : ""
+        }${screening ? ` 已用 ${screening.sourceLabel} 做稳定水体筛除。` : ""}`;
+      } else {
+        note = "当前直接复用页面已有异常 ROI 作为最小推理输出。";
+      }
     }
 
     const elapsedMs = performance.now() - startedAt;
@@ -3616,11 +4082,38 @@ function renderOfflineEvalPanel(report = latestEvalReport) {
       </div>
     </div>
   `;
+  if (report.trajectoryBenchmark?.arms?.length) {
+    evalSummary
+      .querySelector(".cache-summary-grid")
+      ?.insertAdjacentHTML(
+        "beforeend",
+        `
+          <div class="brief-card">
+            <span>Trajectory Benchmark</span>
+            <strong>${report.trajectoryBenchmark.arms.length} arms</strong>
+            <p>${report.trajectoryBenchmark.arms
+              .map((arm) => `${arm.label}:${arm.evidencePathLength || 0}`)
+              .join(" 路 ")}</p>
+          </div>
+        `
+      );
+  }
   evalOutput.textContent = JSON.stringify(report, null, 2);
 }
 
-function runOfflineEvalPanel() {
-  const scenario = latestObservedScenario ?? buildScenarioSnapshot();
+async function runOfflineEvalPanel() {
+  const observedScenario = latestObservedScenario ?? buildScenarioSnapshot();
+  const gate =
+    latestPreprocessGate ??
+    evaluatePreprocessGate({
+      scenario: observedScenario,
+      cloudMaskResult: latestCloudMaskResult,
+      threshold: currentCloudMaskThreshold(),
+    });
+  const scenario =
+    latestReport?.mode === "operational"
+      ? latestReport.scenario
+      : scenarioForAgentExecution(observedScenario, gate);
   if (!latestVectorCollection) {
     buildVectorCollection();
   }
@@ -3633,6 +4126,20 @@ function runOfflineEvalPanel() {
     queueSummary: summarizePrecomputeQueue(readPrecomputeQueue()),
     report: latestReport,
   });
+  latestTrajectoryBenchmark = null;
+  if (["wildfire", "dust"].includes(scenario?.type || "")) {
+    latestTrajectoryBenchmark = await runEvidenceBenchmarkSuite({
+      scenario,
+      options: currentOptions(),
+      runAgentMission: (scene, opts) => runAgentMission(scene, opts, readMemory(), { taskId: scene.type }),
+      runBaselineMission,
+      geoMemoryInput: readGeoMemory(),
+    });
+    latestEvalReport = {
+      ...latestEvalReport,
+      trajectoryBenchmark: latestTrajectoryBenchmark,
+    };
+  }
   renderOfflineEvalPanel(latestEvalReport);
 }
 
@@ -3649,6 +4156,7 @@ function currentOptions() {
     budgetMin: Number(budgetInput.value),
     powerMode: powerModeSelect.value,
     downlinkPolicy: downlinkSelect.value,
+    agenticEvidencePlanner: evidencePlannerEnabled(),
   };
 }
 
@@ -3698,6 +4206,7 @@ function seedControls() {
   dateInput.max = toInputDateValue(timeline.end);
   timelineStartLabel.textContent = formatShortDate(timeline.start);
   timelineEndLabel.textContent = formatShortDate(timeline.end);
+  resetFireOverlayControls(scenario);
 
   renderTimelineStatus();
 }
@@ -3890,6 +4399,7 @@ function renderSceneLoading(snapshot) {
 function ensureSceneMapShell(scenario) {
   let frame = sceneMap.querySelector(".scene-frame");
   let image = sceneMap.querySelector(".scene-image");
+  let imageOverlay = sceneMap.querySelector(".scene-image-overlay");
   let roiLayer = sceneMap.querySelector(".roi-layer");
   let loadingOverlay = sceneMap.querySelector(".scene-loading-overlay");
   let locator = sceneMap.querySelector(".scene-locator");
@@ -3897,10 +4407,21 @@ function ensureSceneMapShell(scenario) {
   let aux = sceneMap.querySelector(".scene-aux");
   let credit = sceneMap.querySelector(".scene-credit");
 
-  if (!frame || !image || !roiLayer || !loadingOverlay || !locator || !metaGrid || !aux || !credit) {
+  if (
+    !frame ||
+    !image ||
+    !imageOverlay ||
+    !roiLayer ||
+    !loadingOverlay ||
+    !locator ||
+    !metaGrid ||
+    !aux ||
+    !credit
+  ) {
     sceneMap.innerHTML = `
       <div class="scene-frame">
         <img class="scene-image" alt="" />
+        <img class="scene-image scene-image-overlay" alt="" hidden />
         <div class="roi-layer"></div>
         <div class="scene-loading-overlay" hidden></div>
         <div class="scene-locator" hidden></div>
@@ -3911,6 +4432,7 @@ function ensureSceneMapShell(scenario) {
     `;
     frame = sceneMap.querySelector(".scene-frame");
     image = sceneMap.querySelector(".scene-image");
+    imageOverlay = sceneMap.querySelector(".scene-image-overlay");
     roiLayer = sceneMap.querySelector(".roi-layer");
     loadingOverlay = sceneMap.querySelector(".scene-loading-overlay");
     locator = sceneMap.querySelector(".scene-locator");
@@ -3922,8 +4444,9 @@ function ensureSceneMapShell(scenario) {
   frame.style.setProperty("--scene-ratio", scenario.imagery.aspectRatio);
   frame.dataset.loading = "false";
   image.decoding = "async";
+  imageOverlay.decoding = "async";
 
-  return { frame, image, roiLayer, loadingOverlay, locator, metaGrid, aux, credit };
+  return { frame, image, imageOverlay, roiLayer, loadingOverlay, locator, metaGrid, aux, credit };
 }
 
 function resolveSceneImageryView(scenario) {
@@ -4065,10 +4588,38 @@ function buildValidRegionInspectionModel(validRegion = null, { columns = 28, row
   };
 }
 
+function supplementalPreviewTypeLabel(preview = {}) {
+  if (preview.kind === "modis-250m") {
+    return "MODIS 250m Supplement";
+  }
+  return "Sentinel-2 Opportunity";
+}
+
+function supplementalPreviewQualityLabel(preview = {}) {
+  if (preview.kind === "modis-250m") {
+    return preview.resolutionLabel || `${preview.spatialResolutionMeters || 250}m`;
+  }
+  return preview.cloudCover == null ? "cloud unknown" : `cloud ${preview.cloudCover}%`;
+}
+
 function renderSceneMap(scenario, result = null) {
   const showAnnotations = overlayToggle.checked;
   const imageryView = resolveSceneImageryView(scenario);
+  const supplementalPreview = scenario.imagery?.supplementalPreview || null;
+  const supplementalPreviews = Array.isArray(scenario.imagery?.supplementalPreviews)
+    ? scenario.imagery.supplementalPreviews.filter((preview) => preview?.src)
+    : supplementalPreview?.src
+      ? [supplementalPreview]
+      : [];
   const decloudInspectionMode = imageryView.mode === "declouded";
+  const fireOverlay = scenario.analysis?.fireOverlay || null;
+  const fireOverlayDisplay = buildFireDetectionDisplayModel(fireOverlay);
+  const fireOverlayAvailable = Boolean(fireOverlay?.available);
+  const showFireOverlay = showAnnotations && fireOverlayAvailable;
+  const showWmsTimeOverlay = Boolean(
+    scenario.analysis?.wmsTimeOverlay?.src &&
+      (scenario.fireDetectionProfile?.useWmsTimeOverlay || fireOverlay?.config?.useWmsTimeOverlay)
+  );
   const validRegion = getAnalysisValidRegion(scenario.analysis);
   const hasAnalysisOverlayPoints = Array.isArray(scenario.analysis?.overlayPoints);
   const rawOverlayPoints = hasAnalysisOverlayPoints
@@ -4109,9 +4660,14 @@ function renderSceneMap(scenario, result = null) {
     semanticMarkersSuppressed: decloudInspectionMode,
     validRegionInspectionTiles: validRegionInspection.tileCount,
     validRegionBlockedRatio: validRegionInspection.blockedRatio,
+    fireOverlayAvailable,
+    firePointCount: fireOverlay?.summary?.pointCount || 0,
+    fireClusterCount: fireOverlay?.summary?.clusterCount || 0,
+    fireProducts: fireOverlay?.products || [],
+    fireBenchmarkMode: fireOverlay?.benchmarkMode || null,
   };
 
-  const semanticMarkerOverlays = decloudInspectionMode
+  const semanticMarkerOverlays = decloudInspectionMode || fireOverlayAvailable
     ? ""
     : markerModel.markers
         .map(
@@ -4130,21 +4686,84 @@ function renderSceneMap(scenario, result = null) {
           `
         )
         .join("");
+  const fireClusterOverlays = showFireOverlay
+    ? fireOverlayDisplay.clusters
+        .map(
+          (cluster) => `
+            <button
+              type="button"
+              class="fire-cluster-overlay"
+              style="
+                left:${cluster.display?.x ?? 50}%;
+                top:${cluster.display?.y ?? 50}%;
+                --cluster-size:${clamp(1.4 + Math.min(cluster.count, 12) * 0.18, 1.4, 3.9)}rem;
+              "
+              data-fire-popup-kind="cluster"
+              data-fire-popup-id="${escapeHtml(cluster.id)}"
+              aria-label="${escapeHtml(`${cluster.count} fire points cluster`)}"
+            >
+              <span>${cluster.count}</span>
+            </button>
+          `
+        )
+        .join("")
+    : "";
+  const firePointOverlays = showFireOverlay
+    ? fireOverlayDisplay.detections
+        .map(
+          (point) => `
+            <button
+              type="button"
+              class="fire-point-overlay level-${point.confidence?.level || "unknown"}"
+              style="
+                left:${point.display?.x ?? 50}%;
+                top:${point.display?.y ?? 50}%;
+                --fire-point-size:${clamp(0.5 + Math.min(Math.max(Number(point.frpMw) || 0, 0), 140) / 90, 0.5, 1.7)}rem;
+              "
+              data-fire-popup-kind="point"
+              data-fire-popup-id="${escapeHtml(point.id)}"
+              aria-label="${escapeHtml(`${point.satellite} ${point.product} ${point.confidence?.label || "unknown"}`)}"
+            ></button>
+          `
+        )
+        .join("")
+    : "";
+  const firePopupOverlay =
+    showFireOverlay && fireOverlayDisplay.popup
+      ? `
+        <div
+          class="fire-overlay-popup"
+          style="left:${fireOverlayDisplay.popup.x}%;top:${fireOverlayDisplay.popup.y}%;"
+        >
+          <strong>${escapeHtml(fireOverlayDisplay.popup.title)}</strong>
+          ${fireOverlayDisplay.popup.lines
+            .map((line) => `<span>${escapeHtml(line)}</span>`)
+            .join("")}
+        </div>
+      `
+      : "";
 
   const overlays = showAnnotations
     ? `${decloudInspectionMode ? validRegionInspection.html : ""}
-      ${markerModel.points
-        .map((point) => {
-          const classes = ["anomaly-point", `band-${point.band}`];
-          return `
-            <span
-              class="${classes.join(" ")}"
-              style="left:${point.x}%;top:${point.y}%;--point-size:${point.sizeRem}rem;--point-alpha:${point.alpha.toFixed(2)};"
-            ></span>
-          `;
-        })
-        .join("")}
+      ${
+        fireOverlayAvailable
+          ? ""
+          : markerModel.points
+              .map((point) => {
+                const classes = ["anomaly-point", `band-${point.band}`];
+                return `
+                  <span
+                    class="${classes.join(" ")}"
+                    style="left:${point.x}%;top:${point.y}%;--point-size:${point.sizeRem}rem;--point-alpha:${point.alpha.toFixed(2)};"
+                  ></span>
+                `;
+              })
+              .join("")
+      }
+      ${fireClusterOverlays}
+      ${firePointOverlays}
       ${semanticMarkerOverlays}`
+      + firePopupOverlay
     : "";
 
   const focusCard = scenario.focusSelection
@@ -4165,6 +4784,80 @@ function renderSceneMap(scenario, result = null) {
       </div>
     `
     : "";
+  const supplementalStatusCard = supplementalPreview?.src
+    ? `
+      <div class="scene-meta-card">
+        <span>楂樺垎琛ュ厖</span>
+        <strong>${supplementalPreview.title}</strong>
+        <p>${supplementalPreview.note}</p>
+      </div>
+    `
+    : "";
+  const fireStatusCard = fireOverlay
+    ? `
+      <div class="scene-meta-card">
+        <span>Fire Source</span>
+        <strong>${
+          fireOverlay.available
+            ? `${fireOverlay.summary?.pointCount || 0} points / ${fireOverlay.summary?.clusterCount || 0} clusters`
+            : "FIRMS fallback"
+        }</strong>
+        <p>${
+          fireOverlay.available
+            ? `${fireOverlay.config?.windowLabel || "24h"} · ${describeFireConfidenceFilter(
+                fireOverlay.config
+              )} · ${fireOverlay.sourceMode === "local_cache" ? "local_cache" : "live_official"} · ${(fireOverlay.products || []).map((item) => fireProductLabel(item)).join(" / ")}${
+                fireOverlay.config?.queryPlanLabel ? ` · ${fireOverlay.config.queryPlanLabel}` : ""
+              }`
+            : "FIRMS 当前不可用，已回退到既有热异常专题图链路。"
+        }</p>
+      </div>
+    `
+    : "";
+  const thermalRecognitionCard =
+    scenario.type === "wildfire" && scenario.analysis?.thermalModel
+      ? `
+      <div class="scene-meta-card">
+        <span>热异常回退链路</span>
+        <strong>${scenario.analysis.thermalModel.label}</strong>
+        <p>${scenario.analysis.thermalModel.analysisLayerLabel} · ${scenario.analysis.thermalModel.imageryLayerId} · ${scenario.analysis.thermalModel.cloudMaskProductId} · ${scenario.analysis.thermalModel.method}</p>
+      </div>
+    `
+      : "";
+  const dustRecognitionCard =
+    scenario.type === "dust"
+      ? `
+      <div class="scene-meta-card">
+        <span>沙尘识别模型</span>
+        <strong>${scenario.analysis?.dustModel?.label || "Deep Blue / AOD 稳健链"}</strong>
+        <p>${
+          scenario.analysis?.dustSupport
+            ? `${scenario.analysis.dustSupport.sourceLabel} 支持像元 ${formatOptionalPercent(
+                scenario.analysis.dustSupport.supportRatio
+              )}`
+            : `${scenario.analysis?.dustModel?.analysisLayerLabel || scenario.analysis?.sourceLabel || "当前分析层"} 正在作为主识别层，支持层未形成稳定沙尘先验`
+        }${
+          scenario.analysis?.dustScreening
+            ? ` · ${scenario.analysis.dustScreening.sourceLabel} 已剔除稳定水体 ${formatOptionalPercent(
+                scenario.analysis.dustScreening.screenedRatio
+              )}`
+            : ""
+        } · ${scenario.analysis?.dustModel?.imageryLayerId || "same-platform imagery"} · ${
+          scenario.analysis?.dustModel?.cloudMaskProductId || "same-platform cloud mask"
+        } · ${scenario.analysis?.dustModel?.method || "官方沙尘先验 + 连通域聚类"}</p>
+      </div>
+    `
+      : "";
+  const pollutionRecognitionCard =
+    scenario.type === "pollution" && scenario.analysis?.pollutionModel
+      ? `
+      <div class="scene-meta-card">
+        <span>雾霾识别模型</span>
+        <strong>${scenario.analysis.pollutionModel.label}</strong>
+        <p>${scenario.analysis.pollutionModel.analysisLayerLabel} · ${scenario.analysis.pollutionModel.imageryLayerId} · ${scenario.analysis.pollutionModel.cloudMaskProductId} · ${scenario.analysis.pollutionModel.method}</p>
+      </div>
+    `
+      : "";
   const sceneMarkerModeDetail = showAnnotations
     ? decloudInspectionMode
       ? `当前处于去云检查视图，已隐藏摘要标签与锚点，只保留通过有效区裁剪的异常像元点。${overlayClip.clipApplied ? ` 本次额外过滤 ${overlayClip.hiddenPoints} 个无效点，并移除了 ${overlayClip.droppedRoiIds.length} 个无效异常簇。` : ""}`
@@ -4176,6 +4869,15 @@ function renderSceneMap(scenario, result = null) {
             : ""
         }`
     : "当前已隐藏异常标记，便于直接对照底图检查云层、纹理与异常位置。";
+  const sceneMarkerModeDisplayDetail =
+    showAnnotations && fireOverlayAvailable && !decloudInspectionMode
+      ? "当前优先显示 FIRMS 官方火点与聚类结果，用于 wildfire 第一阶段热点确认。点击火点或聚类可查看 time、source、confidence、FRP 与 daynight。"
+      : sceneMarkerModeDetail;
+  const sceneMarkerModeTitle = showAnnotations
+    ? fireOverlayAvailable
+      ? "FIRMS fire overlay"
+      : markerModel.summary.title
+    : "已关闭标记";
   const sceneInspectionCard = decloudInspectionMode
     ? `
       <div class="scene-meta-card">
@@ -4200,18 +4902,68 @@ function renderSceneMap(scenario, result = null) {
           : []),
       ]
     : markerModel.legend;
+  const sceneLegendDisplayItems =
+    fireOverlayAvailable && !decloudInspectionMode
+      ? [
+          { key: "fire-point", swatchClass: "fire-point", label: "FIRMS fire point" },
+          { key: "fire-cluster", swatchClass: "fire-cluster", label: "FIRMS cluster" },
+        ]
+      : sceneLegendItems;
+  const supplementalPreviewCard = supplementalPreviews.length
+    ? supplementalPreviews
+        .map(
+          (preview) => `
+      <article class="scene-supplemental-card">
+        <div class="scene-supplemental-media">
+          <img
+            class="scene-supplemental-image"
+            src="${preview.src}"
+            alt="${preview.title}"
+            loading="eager"
+            decoding="async"
+          />
+        </div>
+        <div class="scene-supplemental-copy">
+          <span>${supplementalPreviewTypeLabel(preview)}</span>
+          <strong>${preview.title}</strong>
+          <p>${preview.detail}</p>
+          <div class="scene-supplemental-meta">
+            <span>${preview.observationLabel}</span>
+            <span>${supplementalPreviewQualityLabel(preview)}</span>
+            <span>${preview.providerLabel}</span>
+          </div>
+        </div>
+      </article>
+    `
+        )
+        .join("")
+    : "";
 
   const shell = ensureSceneMapShell(scenario);
   shell.loadingOverlay.hidden = true;
   shell.loadingOverlay.innerHTML = "";
   shell.frame.dataset.sceneView = imageryView.mode;
   shell.frame.dataset.decloudAvailable = imageryView.available ? "true" : "false";
+  shell.frame.dataset.fireOverlay = fireOverlayAvailable ? "true" : "false";
   if (shell.image.dataset.sceneSrc !== imageryView.src) {
     shell.image.src = imageryView.src;
     shell.image.dataset.sceneSrc = imageryView.src;
   }
   shell.image.alt = `${scenario.title} ${imageryView.label}`;
+  if (showWmsTimeOverlay && scenario.analysis?.wmsTimeOverlay?.src) {
+    if (shell.imageOverlay.dataset.sceneSrc !== scenario.analysis.wmsTimeOverlay.src) {
+      shell.imageOverlay.src = scenario.analysis.wmsTimeOverlay.src;
+      shell.imageOverlay.dataset.sceneSrc = scenario.analysis.wmsTimeOverlay.src;
+    }
+    shell.imageOverlay.alt = `${scenario.title} ${scenario.analysis.wmsTimeOverlay.label || "WMS-Time overlay"}`;
+    shell.imageOverlay.hidden = false;
+  } else {
+    shell.imageOverlay.hidden = true;
+    shell.imageOverlay.removeAttribute("src");
+    shell.imageOverlay.dataset.sceneSrc = "";
+  }
   shell.roiLayer.hidden = !showAnnotations;
+  shell.roiLayer.dataset.fireInteractive = showFireOverlay ? "true" : "false";
   shell.roiLayer.innerHTML = showAnnotations ? overlays : "";
   renderSceneLocator(shell, scenario);
   shell.metaGrid.innerHTML = `
@@ -4237,17 +4989,22 @@ function renderSceneMap(scenario, result = null) {
     </div>
     <div class="scene-meta-card">
       <span>标记模式</span>
-      <strong>${showAnnotations ? markerModel.summary.title : "已关闭标记"}</strong>
-      <p>${sceneMarkerModeDetail}</p>
+      <strong>${sceneMarkerModeTitle}</strong>
+      <p>${sceneMarkerModeDisplayDetail}</p>
     </div>
+    ${fireStatusCard}
+    ${thermalRecognitionCard}
+    ${pollutionRecognitionCard}
+    ${dustRecognitionCard}
     ${sceneInspectionCard}
     ${focusCard}
     ${loadCard}
+    ${supplementalStatusCard}
   `;
   shell.aux.innerHTML = showAnnotations
     ? `
       <div class="legend">
-        ${sceneLegendItems
+        ${sceneLegendDisplayItems
           .map(
             (item) => `
               <span class="legend-item">
@@ -4258,8 +5015,12 @@ function renderSceneMap(scenario, result = null) {
           )
           .join("")}
       </div>
+      ${supplementalPreviewCard}
     `
     : '<div class="scene-compare-note">标记已隐藏，可直接进行目视比对。</div>';
+  if (!showAnnotations && supplementalPreviewCard) {
+    shell.aux.innerHTML = `${shell.aux.innerHTML}${supplementalPreviewCard}`;
+  }
   shell.credit.textContent = scenario.imagery.credit;
 }
 
@@ -4560,6 +5321,8 @@ function resetDataAccessPanels() {
   latestS2cloudlessEstimate = null;
   latestFmaskEstimate = null;
   latestAlignmentPlan = null;
+  latestEvidencePlannerRun = null;
+  latestTrajectoryBenchmark = null;
   if (workbenchBootstrapped) {
     renderStacResults();
     renderLaadsResults();
@@ -4587,7 +5350,7 @@ function setRunButtonsBusy(busy) {
 function cacheKeyForSnapshot(snapshot, intent = "preview") {
   return `${intent}:${snapshot.id}:${snapshot.focusSelection?.cacheKey || "preset"}:${snapshot.observation.dateValue}:${String(
     snapshot.observation.hour
-  ).padStart(2, "0")}`;
+  ).padStart(2, "0")}:${fireOverlayProfileKey(snapshot.fireDetectionProfile)}`;
 }
 
 function trimDecisionPreviewCache(preserveKey = null) {
@@ -4616,6 +5379,7 @@ function decisionPreviewCacheKey({ task, scenario, options }) {
     options.budgetMin,
     options.powerMode,
     options.downlinkPolicy,
+    options.agenticEvidencePlanner ? "planner-on" : "planner-off",
   ].join(":");
 }
 
@@ -4717,6 +5481,7 @@ async function refreshScenarioPreview() {
   renderTimelineStatus();
   renderMissionBriefLoading(snapshot, currentOptions());
   renderSceneLoading(snapshot);
+  renderFireOverlayControls(snapshot);
   renderRoiDrawingLab(snapshot);
   renderAgentDecisionPanel(snapshot, currentOptions());
   renderShowcaseSummary(snapshot, currentOptions());
@@ -4749,6 +5514,7 @@ async function refreshScenarioPreview() {
     renderTimelineStatus(scenario);
     renderMissionBrief(scenario, currentOptions());
     renderSceneMap(scenario);
+    renderFireOverlayControls(scenario);
     renderRoiDrawingLab(scenario);
     renderAgentDecisionPanel(scenario, currentOptions());
     renderShowcaseSummary(scenario, currentOptions());
@@ -4814,6 +5580,8 @@ async function runMission() {
     const options = currentOptions();
     const task = currentTask();
     const memory = readMemory();
+    latestEvidencePlannerRun = null;
+    latestTrajectoryBenchmark = null;
 
     renderMissionBrief(scenario, options);
     renderSceneMap(scenario);
@@ -4903,8 +5671,24 @@ async function runMission() {
       return;
     }
 
-    const agentRun = runAgentMission(scenario, options, memory, { taskId: task.id });
-    const baselineRun = runBaselineMission(scenario, options);
+    const executionScenario = scenario;
+    let scenarioForMission = executionScenario;
+    if (options.agenticEvidencePlanner) {
+      latestEvidencePlannerRun = await runEvidencePlannerMission(executionScenario, options, readGeoMemory(), {
+        useGeoMemory: true,
+        useContextSelection: true,
+      });
+      if (latestEvidencePlannerRun?.geoMemory) {
+        writeGeoMemory(latestEvidencePlannerRun.geoMemory);
+      }
+      if (!latestEvidencePlannerRun?.fallbackUsed && latestEvidencePlannerRun?.scenario) {
+        scenarioForMission = latestEvidencePlannerRun.scenario;
+      }
+    }
+
+    latestObservedScenario = scenarioForMission;
+    const agentRun = runAgentMission(scenarioForMission, options, memory, { taskId: task.id });
+    const baselineRun = runBaselineMission(executionScenario, options);
 
     writeMemory(agentRun.memory);
     decisionPreviewCache.clear();
@@ -4912,19 +5696,21 @@ async function runMission() {
     renderWorkflowPlan(agentRun.plan, agentRun.result);
     renderPlanNotes(agentRun.plan);
     await renderLogs(agentRun.result.logs);
-    renderSceneMap(scenario, agentRun.result);
+    renderSceneMap(scenarioForMission, agentRun.result);
     renderMetrics(agentRun, baselineRun);
-    renderNarrative(buildNarrative(scenario, agentRun, baselineRun));
+    renderNarrative(buildNarrative(scenarioForMission, agentRun, baselineRun));
     renderMemory(agentRun.memory);
 
     latestReport = {
-      ...buildReportPayload(scenario, options, agentRun, baselineRun),
+      ...buildReportPayload(scenarioForMission, options, agentRun, baselineRun),
       taskId: task.id,
       mode: "operational",
+      evidencePlanner: latestEvidencePlannerRun,
+      trajectoryBenchmark: latestTrajectoryBenchmark,
     };
-    renderAgentDecisionPanel(scenario, options);
-    renderShowcaseSummary(scenario, options);
-    renderCapabilityPanel(scenario);
+    renderAgentDecisionPanel(scenarioForMission, options);
+    renderShowcaseSummary(scenarioForMission, options);
+    renderCapabilityPanel(scenarioForMission);
   } finally {
     setRunButtonsBusy(false);
   }
@@ -4937,7 +5723,11 @@ function exportReport() {
 
   const dayTag = latestReport.scenario.observation.dateValue;
   const hourTag = String(latestReport.scenario.observation.hour).padStart(2, "0");
-  const blob = new Blob([JSON.stringify(latestReport, null, 2)], {
+  const exportPayload = {
+    ...latestReport,
+    offlineEvaluation: latestEvalReport,
+  };
+  const blob = new Blob([JSON.stringify(exportPayload, null, 2)], {
     type: "application/json",
   });
   const url = URL.createObjectURL(blob);
@@ -5021,6 +5811,16 @@ function resetMemory() {
 function handleScenarioChange() {
   const preset = getOptionPreset(baseScenario());
   const task = currentTask();
+  const hasGlobalSelectionContext = Boolean(
+    activeGlobalSelection?.bbox || pendingGlobalSelection?.bbox || globalSelectionDraft
+  );
+
+  if (hasGlobalSelectionContext) {
+    // Explicitly switching the template should exit the custom global-focus path.
+    resetGlobalSelectionState();
+    renderGlobalOverviewPanel();
+  }
+
   if (task.status === "ready" && task.id !== baseScenario().type) {
     taskTypeSelect.value = baseScenario().type;
   }
@@ -5028,10 +5828,12 @@ function handleScenarioChange() {
   powerModeSelect.value = preset.powerMode;
   downlinkSelect.value = preset.downlinkPolicy;
   budgetValue.textContent = `${preset.budgetMin} 分钟`;
+  resetFireOverlayControls(baseScenario());
   invalidateObservedScenario();
   clearResultPanels();
   resetDataAccessPanels();
   updateRunActionLabels();
+  renderFireOverlayControls();
   scheduleScenarioPreview();
 }
 
@@ -5078,10 +5880,12 @@ function handleTaskTypeChange() {
     scenarioSelect.value = presetScenarioId;
   }
 
+  resetFireOverlayControls(baseScenario());
   invalidateObservedScenario();
   clearResultPanels();
   resetDataAccessPanels();
   updateRunActionLabels();
+  renderFireOverlayControls();
   scheduleScenarioPreview();
 }
 
@@ -5095,6 +5899,71 @@ function handleOverlayToggle() {
     : null;
 
   renderSceneMap(latestObservedScenario, result);
+}
+
+function handleFireOverlayControlsChange(event) {
+  const windowButton = event.target.closest("[data-fire-window]");
+  if (windowButton && event.type === "click") {
+    const nextDayRange = Number(windowButton.dataset.fireWindow);
+    if ([1, 3, 5, 7].includes(nextDayRange) && currentFireOverlayDayRange !== nextDayRange) {
+      currentFireOverlayDayRange = nextDayRange;
+      refreshAfterFireOverlayControlChange();
+    }
+    return;
+  }
+
+  const productInput = event.target.closest("[data-fire-product]");
+  if (productInput && event.type === "change") {
+    const productId = String(productInput.dataset.fireProduct || "");
+    const selected = new Set(normalizeFireOverlayProducts(currentFireOverlayProducts));
+    if (productInput.checked) {
+      selected.add(productId);
+    } else {
+      selected.delete(productId);
+    }
+    currentFireOverlayProducts = normalizeFireOverlayProducts([...selected]);
+    refreshAfterFireOverlayControlChange();
+    return;
+  }
+
+  const lowConfidenceInput = event.target.closest("[data-fire-low-confidence]");
+  if (lowConfidenceInput && event.type === "change") {
+    currentFireOverlayIncludeLowConfidence = Boolean(lowConfidenceInput.checked);
+    refreshAfterFireOverlayControlChange();
+    return;
+  }
+
+  const wmsTimeInput = event.target.closest("[data-fire-wms-time]");
+  if (wmsTimeInput && event.type === "change") {
+    currentFireOverlayUseWmsTimeOverlay = Boolean(wmsTimeInput.checked);
+    refreshAfterFireOverlayControlChange();
+  }
+}
+
+function handleSceneMapClick(event) {
+  const trigger = event.target.closest("[data-fire-popup-kind][data-fire-popup-id]");
+  if (!trigger) {
+    if (currentFireOverlayPopup) {
+      resetFireOverlayPopup();
+      if (latestObservedScenario) {
+        const result = reportMatchesScenario(latestObservedScenario) ? latestReport?.agentResult : null;
+        renderSceneMap(latestObservedScenario, result);
+      }
+    }
+    return;
+  }
+
+  const nextPopup = {
+    kind: trigger.dataset.firePopupKind,
+    id: trigger.dataset.firePopupId,
+  };
+  const isSamePopup =
+    currentFireOverlayPopup?.kind === nextPopup.kind && currentFireOverlayPopup?.id === nextPopup.id;
+  setFireOverlayPopup(isSamePopup ? null : nextPopup);
+  if (latestObservedScenario) {
+    const result = reportMatchesScenario(latestObservedScenario) ? latestReport?.agentResult : null;
+    renderSceneMap(latestObservedScenario, result);
+  }
 }
 
 function handleMemoryPanelClick(event) {
@@ -5373,6 +6242,7 @@ function currentDiagnostics() {
   const currentAnalysis = latestObservedScenario?.analysis || null;
   return {
     surfaceMode: selectedSurfaceMode(),
+    featureFlags: currentFeatureFlags,
     latestObservedScenarioId: latestObservedScenario?.id || null,
     latestObservedScenarioIntent,
     sceneCacheSize: sceneCache.size,
@@ -5383,6 +6253,13 @@ function currentDiagnostics() {
     globalInteractionMode,
     latestSceneLoadSummary,
     sceneOverlay: latestSceneOverlayDiagnostics,
+    fireOverlayControls: {
+      dayRange: currentFireOverlayDayRange,
+      products: [...currentFireOverlayProducts],
+      includeLowConfidence: currentFireOverlayIncludeLowConfidence,
+      useWmsTimeOverlay: currentFireOverlayUseWmsTimeOverlay,
+      popup: currentFireOverlayPopup,
+    },
     sceneAnalysis: currentAnalysis
       ? {
           validPixelRatio: currentAnalysis.validPixelRatio,
@@ -5396,6 +6273,15 @@ function currentDiagnostics() {
             null,
         }
       : null,
+    geoMemory: summarizeGeoMemory(readGeoMemory()),
+    evidencePlanner: latestEvidencePlannerRun
+      ? {
+          supported: latestEvidencePlannerRun.supported,
+          fallbackUsed: latestEvidencePlannerRun.fallbackUsed,
+          stopReason: latestEvidencePlannerRun.stopReason || latestEvidencePlannerRun.fallbackReason || null,
+          evidencePathLength: latestEvidencePlannerRun.evidencePath?.length || 0,
+        }
+      : null,
     remoteSensing: getRemoteSensingDiagnostics(),
   };
 }
@@ -5407,6 +6293,15 @@ function installLocalDebugBridge() {
 
   window.__satAgentDebug = {
     getDiagnostics: () => currentDiagnostics(),
+    getFeatureFlags: () => ({ ...currentFeatureFlags }),
+    setFeatureFlag: (key, value) => {
+      writeFeatureFlags(setFeatureFlag(currentFeatureFlags, key, value));
+      decisionPreviewCache.clear();
+      renderAgentDecisionPanel(latestObservedScenario ?? undefined, currentOptions());
+      renderShowcaseSummary(latestObservedScenario ?? undefined, currentOptions());
+      return { ...currentFeatureFlags };
+    },
+    getGeoMemorySummary: () => summarizeGeoMemory(readGeoMemory()),
     getCurrentTask: () => currentTask(),
     switchSurfaceMode: (mode) => handleSurfaceModeChange(mode),
     applyGlobalSelection: (selection = {}) => {
@@ -5488,6 +6383,7 @@ function handleSurfaceModeChange(mode) {
   if (selectedSurfaceMode() === "workbench") {
     ensureWorkbenchBootstrapped();
   }
+  renderFireOverlayControls(latestObservedScenario ?? buildScenarioSnapshot());
   renderShowcaseSummary(latestObservedScenario ?? undefined, currentOptions());
   renderCapabilityPanel(latestObservedScenario ?? undefined);
 }
@@ -5507,6 +6403,7 @@ function bootstrap() {
   clearResultPanels();
   renderMemory(readMemory());
   renderAgentDecisionPanel();
+  renderFireOverlayControls();
   renderShowcaseSummary();
   renderCapabilityPanel();
   updateRunActionLabels();
@@ -5528,6 +6425,9 @@ function bootstrap() {
   });
   overlayToggle.addEventListener("change", handleOverlayToggle);
   decloudPreviewToggle.addEventListener("change", handleOverlayToggle);
+  fireOverlayControls?.addEventListener("click", handleFireOverlayControlsChange);
+  fireOverlayControls?.addEventListener("change", handleFireOverlayControlsChange);
+  sceneMap.addEventListener("click", handleSceneMapClick);
   memoryPanel.addEventListener("click", handleMemoryPanelClick);
   globalOverviewCanvas.addEventListener("pointerdown", handleGlobalPointerDown);
   globalOverviewCanvas.addEventListener("wheel", handleGlobalWheel, { passive: false });

@@ -1,0 +1,68 @@
+{
+  "cases": [
+    {
+      "id": "archive-reviewed-positive",
+      "label": "Archive Reviewed Positive",
+      "case_type": "AF_positive",
+      "time_semantics": "archive_sp",
+      "expected_outcome": {
+        "raw_points": "present",
+        "cluster_state": "reviewed_positive",
+        "scoring_role": "positive_gold"
+      },
+      "primary_eval_metric": "event_recall",
+      "acceptable_time_offset": {
+        "max_abs_min": 360
+      },
+      "sensor_priority": ["VIIRS_SNPP_SP"],
+      "aoi": [-121.4, 38.4, -121.2, 38.6],
+      "anchorUtc": "2025-08-15T12:00:00.000Z",
+      "requestedWindowDays": 1,
+      "archive_sources": [
+        {
+          "id": "snpp-archive-slice",
+          "label": "SNPP archive CSV",
+          "path": "sources/reviewed_positive.csv",
+          "format": "csv",
+          "sensor": "VIIRS_SNPP_SP",
+          "product": "VIIRS_SNPP_SP",
+          "date": "2025-08-15",
+          "apiDayRange": 1,
+          "requestedWindowDays": 1
+        }
+      ]
+    },
+    {
+      "id": "archive-empty-case",
+      "label": "Archive Empty Case",
+      "case_type": "empty",
+      "time_semantics": "archive_sp",
+      "expected_outcome": {
+        "raw_points": "absent",
+        "cluster_state": "absent",
+        "scoring_role": "negative_gold"
+      },
+      "primary_eval_metric": "empty_scene_specificity",
+      "acceptable_time_offset": {
+        "max_abs_min": 360
+      },
+      "sensor_priority": ["VIIRS_NOAA20_SP"],
+      "aoi": [-10, 10, -9, 11],
+      "anchorUtc": "2025-08-15T12:00:00.000Z",
+      "requestedWindowDays": 1,
+      "archive_sources": [
+        {
+          "id": "noaa20-archive-slice",
+          "label": "NOAA-20 archive JSON",
+          "path": "sources/empty_scene.json",
+          "format": "json",
+          "sensor": "VIIRS_NOAA20_SP",
+          "product": "VIIRS_NOAA20_SP",
+          "date": "2025-08-15",
+          "apiDayRange": 1,
+          "requestedWindowDays": 1
+        }
+      ]
+    }
+  ]
+}

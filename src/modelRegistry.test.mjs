@@ -31,7 +31,7 @@ test("缺少关键字段的模型会被 fail-fast 捕获", () => {
   assert.ok(validation.errors.length >= 1);
 });
 
-test("推荐逻辑会优先返回本地可用的连续反演模型", () => {
+test("沙尘任务优先返回官方 Deep Blue 沙尘识别链", () => {
   const recommended = recommendModels(
     {
       taskType: "dust",
@@ -51,7 +51,7 @@ test("推荐逻辑会优先返回本地可用的连续反演模型", () => {
     }
   );
 
-  assert.equal(recommended[0].id, "local-aod-inversion-net");
+  assert.equal(recommended[0].id, "official-deep-blue-dust-identification");
   assert.equal(recommended[0].runtimeStatus.state, "ready");
 });
 
@@ -103,4 +103,56 @@ test("模型注册表摘要会返回总数和 runtime 分布", () => {
   const summary = summarizeModelRegistry(modelRegistry);
   assert.equal(summary.total, modelRegistry.length);
   assert.ok(summary.runtimes.browser >= 1);
+});
+test("pollution recommendation follows the selected satellite analysis layer", () => {
+  const recommended = recommendModels(
+    {
+      taskType: "pollution",
+      analysisLayerId: "modis-aqua-aod-3km",
+      sensorText: "MODIS Aqua AOD 3km",
+      scaleMeters: 1000,
+      radiometricQuality: 0.69,
+      staticPredictionAvailable: true,
+    },
+    {
+      "static-scene-prediction": {
+        available: true,
+      },
+    }
+  );
+
+  assert.equal(recommended[0].id, "official-modis-aqua-haze-aod");
+});
+
+test("dust recommendation follows the selected satellite analysis layer", () => {
+  const recommended = recommendModels(
+    {
+      taskType: "dust",
+      analysisLayerId: "viirs-noaa20-deep-blue-dust-aot",
+      sensorText: "VIIRS NOAA-20 Deep Blue AOT",
+      scaleMeters: 1000,
+      radiometricQuality: 0.69,
+      staticPredictionAvailable: false,
+    },
+    {}
+  );
+
+  assert.equal(recommended[0].id, "official-viirs-noaa20-deep-blue-dust");
+});
+
+test("wildfire recommendation follows the selected thermal analysis layer", () => {
+  const recommended = recommendModels(
+    {
+      taskType: "wildfire",
+      analysisLayerId: "viirs-snpp-thermal-anomalies-375m",
+      sensorText: "VIIRS SNPP Thermal Anomalies",
+      scaleMeters: 375,
+      radiometricQuality: 0.74,
+      staticPredictionAvailable: false,
+    },
+    {}
+  );
+
+  assert.equal(recommended[0].id, "official-thermal-hotspot-clustering");
+  assert.equal(recommended[0].analysisLayerId, "viirs-snpp-thermal-anomalies-375m");
 });

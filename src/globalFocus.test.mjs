@@ -38,6 +38,12 @@ test("adaptiveFocusProfile reduces render size for large areas", () => {
   assert.ok(globalProfile.analysisWidth < localProfile.analysisWidth);
 });
 
+test("default dust scenario starts on a satellite-specific dust analysis layer", () => {
+  const base = getScenarioById("dust-frontier");
+
+  assert.equal(base.analysisProfile.layerId, "viirs-noaa20-deep-blue-dust-aot");
+});
+
 test("buildFocusScenario converts a task template into a custom focus scenario", () => {
   const base = getScenarioById("urban-plume");
   const observation = observationFromParts(0, 0);
@@ -52,4 +58,50 @@ test("buildFocusScenario converts a task template into a custom focus scenario",
   assert.equal(scenario.supportsLocalModel, false);
   assert.equal(Array.isArray(scenario.fallbackRois), true);
   assert.equal(scenario.focusSelection.scaleKey, "local");
+});
+
+test("pollution focus scenarios select analysis layers by area scale", () => {
+  const base = getScenarioById("urban-plume");
+  const observation = observationFromParts(0, 0);
+
+  const globalScenario = buildFocusScenario(base, observation, {
+    bbox: [-170, -50, 170, 50],
+  });
+  const continentalScenario = buildFocusScenario(base, observation, {
+    bbox: [40, 5, 110, 36],
+  });
+  const regionalScenario = buildFocusScenario(base, observation, {
+    bbox: [90, 10, 120, 30],
+  });
+  const localScenario = buildFocusScenario(base, observation, {
+    bbox: [112, 21, 116, 24],
+  });
+
+  assert.equal(globalScenario.analysisProfile.layerId, "viirs-snpp-aod-dark-target-land-ocean");
+  assert.equal(continentalScenario.analysisProfile.layerId, "modis-aqua-aod-3km");
+  assert.equal(regionalScenario.analysisProfile.layerId, "viirs-noaa20-aod-dark-target-land-ocean");
+  assert.equal(localScenario.analysisProfile.layerId, "viirs-noaa21-aod-dark-target-land-ocean");
+});
+
+test("dust focus scenarios select satellite-specific dust identification layers by area scale", () => {
+  const base = getScenarioById("dust-frontier");
+  const observation = observationFromParts(0, 0);
+
+  const globalScenario = buildFocusScenario(base, observation, {
+    bbox: [-170, -50, 170, 50],
+  });
+  const continentalScenario = buildFocusScenario(base, observation, {
+    bbox: [40, 5, 110, 36],
+  });
+  const regionalScenario = buildFocusScenario(base, observation, {
+    bbox: [90, 10, 120, 30],
+  });
+  const localScenario = buildFocusScenario(base, observation, {
+    bbox: [86, 38, 90, 41],
+  });
+
+  assert.equal(globalScenario.analysisProfile.layerId, "airs-aqua-dust-score-day-analysis");
+  assert.equal(continentalScenario.analysisProfile.layerId, "viirs-snpp-deep-blue-dust-aot");
+  assert.equal(regionalScenario.analysisProfile.layerId, "viirs-noaa20-deep-blue-dust-aot");
+  assert.equal(localScenario.analysisProfile.layerId, "modis-terra-deep-blue-dust-aod");
 });
