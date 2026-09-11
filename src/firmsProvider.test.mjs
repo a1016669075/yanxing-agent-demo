@@ -77,3 +77,58 @@ test("fetchFirmsFireOverlay filters low confidence by default and builds cluster
     global.fetch = originalFetch;
   }
 });
+
+test("fetchFirmsFireOverlay uses the packaged demo snapshot when the Pages API is absent", async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async (input) => {
+    if (String(input) === "/api/firms-area") {
+      return {
+        ok: false,
+        async json() {
+          return {};
+        },
+      };
+    }
+    return {
+      ok: true,
+      async json() {
+        return {
+          snapshotDate: "2026-09-11",
+          generatedAt: "2026-09-11T08:00:00.000Z",
+          bbox: [96, 16, 104, 24],
+          rows: [{
+            product: "VIIRS_NOAA21_NRT",
+            latitude: "21.44",
+            longitude: "101.18",
+            acq_date: "2026-09-11",
+            acq_time: "0548",
+            confidence: "n",
+            frp: "3.01",
+            daynight: "D",
+            scan: "0.37",
+            track: "0.58",
+            satellite: "N21",
+          }],
+        };
+      },
+    };
+  };
+
+  try {
+    const overlay = await fetchFirmsFireOverlay(
+      {
+        id: "wildfire-firms-demo",
+        imageryProfile: { bbox: [96, 16, 104, 24] },
+        analysisProfile: { maxRois: 6 },
+      },
+      new Date("2026-09-11T08:00:00.000Z"),
+      {}
+    );
+
+    assert.equal(overlay.available, true);
+    assert.equal(overlay.sourceMode, "local_cache");
+    assert.equal(overlay.summary.pointCount, 1);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});

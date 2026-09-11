@@ -31,6 +31,65 @@ function normalizeBBox(bbox = null) {
   return normalized.every((value) => Number.isFinite(value)) ? normalized : null;
 }
 
+function sameBBox(left = null, right = null) {
+  const a = normalizeBBox(left);
+  const b = normalizeBBox(right);
+  return Boolean(a && b && a.every((value, index) => Math.abs(value - b[index]) < 0.000001));
+}
+
+async function fetchStaticDemoSnapshot(scenario, request, profile, { signal } = {}) {
+  if (scenario?.id !== "wildfire-firms-demo") {
+    return null;
+  }
+
+  const response = await fetch(
+    new URL("../../../assets/firms/wildfire-firms-demo.json", import.meta.url),
+    { signal }
+  );
+  if (!response.ok) {
+    return null;
+  }
+
+  const snapshot = await response.json();
+  if (!sameBBox(request?.bbox, snapshot?.bbox) || !/^\d{4}-\d{2}-\d{2}$/.test(snapshot?.snapshotDate || "")) {
+    return null;
+  }
+
+  const lastDay = new Date(`${snapshot.snapshotDate}T00:00:00.000Z`).getTime();
+  const firstDay = lastDay - (profile.dayRange - 1) * 24 * 60 * 60 * 1000;
+  const rows = (Array.isArray(snapshot.rows) ? snapshot.rows : []).filter((row) => {
+    const rowDay = new Date(`${row.acq_date}T00:00:00.000Z`).getTime();
+    return profile.products.includes(row.product) && rowDay >= firstDay && rowDay <= lastDay;
+  });
+  const segments = profile.products.map((product) => ({
+    sliceId: `pages-snapshot-${profile.dayRange}d-${product}`,
+    label: `${profile.windowLabel} GitHub Pages snapshot`,
+    product,
+    apiDayRange: Math.min(profile.dayRange, 5),
+    requestedWindowDays: profile.dayRange,
+    date: snapshot.snapshotDate,
+    rows: rows.filter((row) => row.product === product),
+  }));
+
+  return {
+    provider: "firms",
+    mode: profile.mode,
+    dayRange: profile.dayRange,
+    date: snapshot.snapshotDate,
+    bbox: snapshot.bbox,
+    products: profile.products,
+    segments,
+    rows,
+    sourceMode: "local_cache",
+    cache: {
+      kind: "github_pages_snapshot",
+      snapshotDate: snapshot.snapshotDate,
+      generatedAt: snapshot.generatedAt || null,
+    },
+    fallbackReason: "static_host_no_firms_api",
+  };
+}
+
 export function normalizeWildfireProviderConfig(config = {}) {
   const source = config && typeof config === "object" ? config : {};
   const defaultProducts = wildfireProviderCatalog.firms.defaultProducts;
@@ -100,6 +159,9 @@ export async function fetchFirmsFireOverlay(
   }
 
   const startedAt = Date.now();
+  let payload = null;
+  let failureReason = "firms_request_failed";
+  let failureDetail = "";
 
   try {
     const response = await fetch("/api/firms-area", {
@@ -116,23 +178,37 @@ export async function fetchFirmsFireOverlay(
       }),
       signal,
     });
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      return {
-        available: false,
-        providerId: "firms",
-        reason: payload.error || "firms_request_failed",
-        detail: payload.message || "",
-        config: profile,
-        detections: [],
-        rawDetections: [],
-        clusters: [],
-        rois: [],
-        summary: summarizeFireOverlay([], [], { rawArchive: [] }),
-      };
+    if (response.ok) {
+      payload = await response.json();
+    } else {
+      const errorPayload = await response.json().catch(() => ({}));
+      failureReason = errorPayload.error || failureReason;
+      failureDetail = errorPayload.message || "";
     }
+  } catch (error) {
+    failureDetail = String(error?.message || error);
+  }
 
-    const payload = await response.json();
+  if (!payload) {
+    payload = await fetchStaticDemoSnapshot(scenario, request, profile, { signal }).catch(() => null);
+  }
+
+  if (!payload) {
+    return {
+      available: false,
+      providerId: "firms",
+      reason: failureReason,
+      detail: failureDetail,
+      config: profile,
+      detections: [],
+      rawDetections: [],
+      clusters: [],
+      rois: [],
+      summary: summarizeFireOverlay([], [], { rawArchive: [] }),
+    };
+  }
+
+  try {
     const sourceMode = payload.sourceMode || "live_official";
     const ingestion = buildEvidenceFromFirmsPayload(payload, request);
     const discovery = runWildfireDiscovery(ingestion.detectionArchive, {
