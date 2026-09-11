@@ -1,0 +1,34 @@
+{
+  "model_name": "VIIRS Element84-style weak-label pixel classifier",
+  "feature_order": [
+    "red",
+    "green",
+    "blue",
+    "brightness",
+    "red_minus_blue",
+    "red_minus_green",
+    "rgb_range",
+    "x_norm",
+    "y_norm",
+    "red_minus_blue_x_norm",
+    "brightness_y_norm",
+    "bias_feature"
+  ],
+  "weights": [
+    -0.26437333227500753,
+    0.03843215134337104,
+    0.07833473523934849,
+    0.011348007499399805,
+    0.042617007217508905,
+    0.0898893698189705,
+    -0.3094253214498377,
+    0.0898893698189705,
+    -0.16395398457077165,
+    0.04782605073846324,
+    1.2888063695400847,
+    0.6301490418626341,
+    -0.25616565555653903
+  ],
+  "threshold": 0.64,
+  "positive_weight": 4.3538
+}

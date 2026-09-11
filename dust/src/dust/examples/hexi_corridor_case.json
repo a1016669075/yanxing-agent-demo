@@ -1,0 +1,57 @@
+{
+  "round": "dust-round-025",
+  "case_id": "hexi-corridor-2021-03-15",
+  "name": "Hexi Corridor dust event",
+  "event_date": "2021-03-15",
+  "aoi": {
+    "label": "Hexi Corridor, Gansu / Inner Mongolia margin",
+    "bbox": [
+      94,
+      37.4,
+      104.5,
+      42.5
+    ],
+    "crs": "EPSG:4326"
+  },
+  "why_this_case": [
+    "The corridor is a dust transport and source-region interpretation area linking Gobi/desert margins with downwind northern China.",
+    "The AOI is narrow enough for medium-scale VIIRS corrected-reflectance plume localization while still covering coarse regional dust context.",
+    "Sentinel-2 imagery near the event date is available as high-resolution supporting context, but not same-day dust segmentation."
+  ],
+  "scale_plan": [
+    {
+      "scale": "coarse",
+      "sensor": "AIRS Aqua Dust Score / MODIS context",
+      "role": "regional anomaly discovery"
+    },
+    {
+      "scale": "medium",
+      "sensor": "VIIRS NOAA-20 Corrected Reflectance + Deep Blue AOT/Aerosol Type support",
+      "role": "plume localization and pixel-level support mask"
+    },
+    {
+      "scale": "high",
+      "sensor": "Sentinel-2 L2A",
+      "role": "source-region and confounder support only"
+    }
+  ],
+  "data_sources": [
+    {
+      "name": "NASA GIBS / Worldview",
+      "url": "https://gibs.earthdata.nasa.gov/",
+      "use": "AIRS Dust Score, VIIRS corrected reflectance, VIIRS Deep Blue support layers"
+    },
+    {
+      "name": "Earth Search STAC",
+      "url": "https://earth-search.aws.element84.com/v1",
+      "use": "Sentinel-2 L2A candidate discovery"
+    },
+    {
+      "name": "NASA POWER hourly point API",
+      "url": "https://power.larc.nasa.gov/",
+      "use": "wind, humidity and temperature support evidence"
+    }
+  ],
+  "display_policy": "Use this as the default AOI for the dust-agent screenshot path. Current red masks remain rendered-product support/demo layers until sensor-specific model inference is executed.",
+  "round_note": "Round 025 keeps the Hexi Corridor AOI and replaces the weak high-resolution no-data thumbnail with a selected Sentinel-2 supporting context scene."
+}

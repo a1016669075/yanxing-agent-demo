@@ -1,0 +1,144 @@
+{
+  "round": "dust-round-015",
+  "tool_id": "modis_3dcnn_dust_adapter",
+  "model_name": "Rivas-AI dust-3dcnn",
+  "source_url": "https://github.com/Rivas-AI/dust-3dcnn",
+  "status": "model_ready_reference_only",
+  "current_aoi_inference": "not_run",
+  "satellite_or_sensor": "MODIS Terra/Aqua multispectral",
+  "expected_input_type": "processed .npy multispectral tensors",
+  "expected_output_type": "dust probability, dust mask, side-by-side prediction image, metrics summary",
+  "selected_reference_case": {
+    "id": "T2025086.0420",
+    "samples": 2735100,
+    "mse": 0.02668,
+    "r2": 0.668,
+    "weighted_mse": 0.012808,
+    "accuracy": 0.82
+  },
+  "overall_metrics": {
+    "total_samples": 32834700,
+    "mse": 0.034774,
+    "r2": -0.227,
+    "weighted_mse": 0.008047,
+    "accuracy": 0.954
+  },
+  "case_metrics": [
+    {
+      "id": "A2024116.0350",
+      "samples": 2735100,
+      "mse": 0.029486,
+      "r2": -1.677,
+      "weighted_mse": 0.004336,
+      "accuracy": 0.845
+    },
+    {
+      "id": "A2024116.0530",
+      "samples": 2735100,
+      "mse": 0.039171,
+      "r2": -0.879,
+      "weighted_mse": 0.011655,
+      "accuracy": 0.771
+    },
+    {
+      "id": "A2025073.2005",
+      "samples": 2735100,
+      "mse": 0.048263,
+      "r2": -2.713,
+      "weighted_mse": 0.010314,
+      "accuracy": 0.943
+    },
+    {
+      "id": "A2025104.1045",
+      "samples": 2735100,
+      "mse": 0.04024,
+      "r2": -2.048,
+      "weighted_mse": 0.009885,
+      "accuracy": 0.961
+    },
+    {
+      "id": "A2025108.2135",
+      "samples": 2735100,
+      "mse": 0.026042,
+      "r2": -0.705,
+      "weighted_mse": 0.005031,
+      "accuracy": 0.928
+    },
+    {
+      "id": "A2025109.2035",
+      "samples": 2735100,
+      "mse": 0.042751,
+      "r2": -3.189,
+      "weighted_mse": 0.007023,
+      "accuracy": 0.972
+    },
+    {
+      "id": "A2025109.2040",
+      "samples": 2735100,
+      "mse": 0.041401,
+      "r2": -1.509,
+      "weighted_mse": 0.011576,
+      "accuracy": 0.865
+    },
+    {
+      "id": "A2025117.2055",
+      "samples": 2735100,
+      "mse": 0.064984,
+      "r2": -2.228,
+      "weighted_mse": 0.017212,
+      "accuracy": 0.838
+    },
+    {
+      "id": "T2024237.1030",
+      "samples": 2735100,
+      "mse": 0.013756,
+      "r2": 0.253,
+      "weighted_mse": 0.001358,
+      "accuracy": 0.883
+    },
+    {
+      "id": "T2025073.1705",
+      "samples": 2748600,
+      "mse": 0.004169,
+      "r2": 0.882,
+      "weighted_mse": 0.001349,
+      "accuracy": 0.973
+    },
+    {
+      "id": "T2025086.0420",
+      "samples": 2735100,
+      "mse": 0.02668,
+      "r2": 0.668,
+      "weighted_mse": 0.012808,
+      "accuracy": 0.82
+    },
+    {
+      "id": "T2025108.1715",
+      "samples": 2735100,
+      "mse": 0.034774,
+      "r2": -0.227,
+      "weighted_mse": 0.008047,
+      "accuracy": 0.954
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "reports/dust-round-005/model-audit/rivas-3dcnn/big_epoch_3_finished.pth",
+      "role": "checkpoint"
+    },
+    {
+      "path": "reports/dust-round-005/model-audit/rivas-3dcnn/T2025086.0420.png",
+      "role": "pre-generated prediction vs ground-truth reference"
+    },
+    {
+      "path": "reports/dust-round-005/model-audit/rivas-3dcnn/test_results.txt",
+      "role": "pre-generated evaluation metrics"
+    }
+  ],
+  "display_policy": "Show as MODIS model-readiness evidence only. Do not use the pre-generated prediction image as current AOI dust evidence.",
+  "limitations": [
+    "processed .npy input folders are missing locally",
+    "no new local prediction was run in this round",
+    "pre-generated image must not be used as current dust anomaly evidence"
+  ]
+}

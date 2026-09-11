@@ -1,0 +1,118 @@
+{
+  "round": "dust-round-025",
+  "tool_id": "modis_3dcnn_input_contract_adapter",
+  "model_name": "Rivas-AI dust-3dcnn",
+  "source_url": "https://github.com/Rivas-AI/dust-3dcnn",
+  "source_script_url": "https://raw.githubusercontent.com/Rivas-AI/dust-3dcnn/main/3DCNN/3dcnn-summary.py",
+  "status": "blocked_by_processed_input",
+  "current_aoi_inference": "not_run",
+  "actual_model_runs": [],
+  "local_artifacts": [
+    {
+      "path": "reports/dust-round-005/model-audit/rivas-3dcnn/big_epoch_3_finished.pth",
+      "exists": true,
+      "bytes": 1151450
+    },
+    {
+      "path": "reports/dust-round-005/model-audit/rivas-3dcnn/T2025086.0420.png",
+      "exists": true,
+      "bytes": 272034
+    },
+    {
+      "path": "reports/dust-round-005/model-audit/rivas-3dcnn/test_results.txt",
+      "exists": true,
+      "bytes": 1720
+    }
+  ],
+  "expected_input_contract": {
+    "processed_root": "3DCNN/processed",
+    "case_folder_pattern": "MODIS granule id such as T2025086.0420",
+    "required_band_arrays": [
+      "B1.npy",
+      "B2.npy",
+      "B3.npy",
+      "B4.npy",
+      "B5.npy",
+      "B6.npy",
+      "B7.npy",
+      "B8.npy",
+      "B9.npy",
+      "B10.npy",
+      "B11.npy",
+      "B12.npy",
+      "B13lo.npy",
+      "B13hi.npy",
+      "B14lo.npy",
+      "B14hi.npy",
+      "B15.npy",
+      "B16.npy",
+      "B17.npy",
+      "B18.npy",
+      "B19.npy",
+      "B20.npy",
+      "B21.npy",
+      "B22.npy",
+      "B23.npy",
+      "B24.npy",
+      "B25.npy",
+      "B26.npy",
+      "B27.npy",
+      "B28.npy",
+      "B29.npy",
+      "B30.npy",
+      "B31.npy",
+      "B32.npy",
+      "B33.npy",
+      "B34.npy",
+      "B35.npy",
+      "B36.npy"
+    ],
+    "required_label_or_shape_array": "x.npy",
+    "array_contract": "Each band and x.npy must be a normalized 2D NumPy array with matching spatial shape.",
+    "patch_contract": "Repository dataset builds one sample per valid x.npy pixel as a tensor shaped (1, 38, 5, 5).",
+    "binary_mask_threshold": 0.5,
+    "output_reconstruction": "Predictions are written back into an image with the same shape as x.npy."
+  },
+  "processed_roots": [
+    {
+      "path": "3DCNN/processed",
+      "exists": false,
+      "case_count": 0,
+      "complete_case_count": 0,
+      "cases": []
+    },
+    {
+      "path": "reports/dust-round-005/model-audit/rivas-3dcnn/processed",
+      "exists": false,
+      "case_count": 0,
+      "complete_case_count": 0,
+      "cases": []
+    },
+    {
+      "path": "data/modis_3dcnn/processed",
+      "exists": false,
+      "case_count": 0,
+      "complete_case_count": 0,
+      "cases": []
+    },
+    {
+      "path": "src/dust/data/modis_3dcnn/processed",
+      "exists": false,
+      "case_count": 0,
+      "complete_case_count": 0,
+      "cases": []
+    }
+  ],
+  "complete_cases": [],
+  "promotion_decision": {
+    "can_run_local_inference_now": false,
+    "can_promote_to_current_aoi_dust_mask": false,
+    "reason": "No complete processed .npy case folder is available locally, so the checkpoint cannot produce a current AOI dust mask."
+  },
+  "next_required_actions": [
+    "Create one processed/current-aoi case folder with all 38 MODIS band arrays and x.npy shape/label array.",
+    "Run the repository evaluation or a minimal inference adapter against the local checkpoint.",
+    "Write probability_map, binary dust mask and metadata to the unified dust_mask_schema before promoting any pixels."
+  ],
+  "display_policy": "Show as an executable input-readiness audit for the MODIS 3D-CNN tool. Do not use the reference PNG as current AOI dust evidence."
+}

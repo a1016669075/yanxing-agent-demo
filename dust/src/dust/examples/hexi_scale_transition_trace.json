@@ -1,0 +1,141 @@
+{
+  "round": "dust-round-043",
+  "tool_id": "hexi_scale_transition_trace_adapter",
+  "event_id": "hexi-corridor-2021-03-15",
+  "status": "executed_display_transition_trace",
+  "current_aoi_inference": "learned_model_inference_from_current_aoi_weak_labels",
+  "actual_model_runs": [
+    "viirs_multichannel_weak_label_segmentation_adapter"
+  ],
+  "transition_summary": {
+    "coarse_alert_pixels": 34,
+    "medium_candidate_pixels": 797,
+    "medium_active_pixels": 1161,
+    "high_context_pixels": 360,
+    "high_temporal_offset_days": 0,
+    "model_promotion": "weak_label_model_executed"
+  },
+  "steps": [
+    {
+      "id": "coarse_discovery",
+      "label": "Step 1 coarse discovery",
+      "scale": "coarse",
+      "sensor": "AIRS Aqua Dust Score / MODIS Terra context",
+      "datetime": "2021-03-15T06:00:00Z",
+      "tool_id": "gibs_rendered_dust_score_threshold_adapter",
+      "red_pixels": 34,
+      "mask_area_km2": 28940,
+      "evidence_status": "executed",
+      "agent_use": "regional anomaly alert surface",
+      "reasoning": "AIRS Dust Score rendered support pixels identify a regional anomaly over the Hexi Corridor AOI. This narrows the search area but is not Dust-Mamba inference.",
+      "limitations": [
+        "rendered GIBS product support",
+        "not raw scientific values",
+        "not model inference"
+      ]
+    },
+    {
+      "id": "medium_localization",
+      "label": "Step 2 medium localization",
+      "scale": "medium",
+      "sensor": "VIIRS NOAA-20 Corrected Reflectance",
+      "datetime": "2021-03-15T06:00:00Z",
+      "tool_id": "viirs_multichannel_weak_label_segmentation_adapter",
+      "candidate_pixels": 797,
+      "red_pixels": 1161,
+      "removed_pixels": 192,
+      "mask_area_km2": 55662,
+      "evidence_status": "executed_multichannel_weak_supervised_segmentation",
+      "agent_use": "plume boundary localization",
+      "reasoning": "The agent switches to VIIRS corrected reflectance, then runs a current-AOI learned pixel classifier trained with VIIRS Deep Blue L2 footprint weak labels.",
+      "limitations": [
+        "This is a local current-AOI weak-label model, not Element84 public model weights.",
+        "Labels come from VIIRS Deep Blue threshold footprints, not manually curated dust semantic masks.",
+        "AOT/Aerosol Type products are also inputs, so the model is a near-term learned bridge and not independent dust validation.",
+        "Validation is a spatial holdout inside the same AOI and should not be reported as independent generalization.",
+        "Not Dust-Mamba FY-4A/LSDSSIMR inference."
+      ]
+    },
+    {
+      "id": "high_interpretation",
+      "label": "Step 3 high-resolution interpretation",
+      "scale": "high",
+      "sensor": "Sentinel-2 L2A AOT + B04/B08 + SCL COG + visual thumbnail",
+      "datetime": "2021-03-15T04:47:36.583Z",
+      "tool_id": "sentinel2_raw_aot_cog_audit_adapter",
+      "red_pixels": 360,
+      "mask_area_km2": 5,
+      "evidence_status": "executed SCL-screened raw AOT + B04/B08 COG sampling audit",
+      "agent_use": "source-region and confounder interpretation",
+      "reasoning": "The selected Sentinel-2 scene is same-day raw COG evidence for source-region and confounder context, but it is not dust segmentation.",
+      "limitations": [
+        "same-day partial tile",
+        "SCL-screened raw Sentinel-2 AOT + B04/B08 low-NDVI source support",
+        "not dust segmentation",
+        "supporting evidence only"
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "id": "coarse_to_medium",
+      "from": "coarse_discovery",
+      "to": "medium_localization",
+      "status": "display_trace_executed",
+      "retained_signal": "34 coarse alert pixels guide the agent to 797 VIIRS AOT candidate pixels.",
+      "precision_gain": "1161 current-AOI learned model pixels replace raw support pixels for the default medium-scale plume mask.",
+      "evidence": [
+        "same Hexi Corridor AOI",
+        "same event date for coarse/medium GIBS products",
+        "VIIRS corrected reflectance used as the medium-scale visual basemap"
+      ]
+    },
+    {
+      "id": "medium_to_high",
+      "from": "medium_localization",
+      "to": "high_interpretation",
+      "status": "supporting_only",
+      "retained_signal": "1161 medium active red pixels provide the target corridor for high-resolution context review.",
+      "precision_gain": "High-resolution same-day scene improves source/confounder context only; it does not improve the dust mask without a Sentinel-2 dust model.",
+      "evidence": [
+        "Sentinel-2 selected scene S2A_46SEJ_20210315_2_L2A",
+        "temporal offset +0 days",
+        "cloud cover 62.87927"
+      ]
+    }
+  ],
+  "agent_assessment": "The agent can demonstrate a scale transition from coarse support alert to medium current-AOI learned VIIRS pixel localization and high-resolution context interpretation. The active learned mask is weak-label supervised and must not be presented as Element84 public weights or Dust-Mamba inference.",
+  "evidence": {
+    "main": [
+      "Coarse alert pixels, medium candidate pixels and medium active red pixels are linked in one trace.",
+      "The high-resolution step is same-day but explicitly supporting-only because no Sentinel-2 dust model ran."
+    ],
+    "supporting": [
+      "Meteorology context: SW (241.5 deg).",
+      "Multi-scale export feature count: 1555."
+    ],
+    "conflicting": [
+      "The medium model is trained from weak labels, not manually curated dust labels.",
+      "High-resolution Sentinel-2 cannot be interpreted as dust segmentation without a model run.",
+      "3 confounder checks remain unknown."
+    ],
+    "precursor": [
+      "Next precision step should replace weak labels with public/manual dust labels or Dust-Mamba FY-4A inference."
+    ]
+  },
+  "display_policy": "Use this trace to show the user path from coarse discovery to medium learned localization to high-resolution interpretation. Label the medium output as current-AOI weak-label inference.",
+  "aoi": {
+    "bbox": [
+      94,
+      37.4,
+      104.5,
+      42.5
+    ],
+    "crs": "EPSG:4326"
+  },
+  "source_paths": {
+    "medium_pixel_evidence": "src/dust/examples/hexi_medium_pixel_evidence.json",
+    "multiscale_pixel_lock": "src/dust/examples/hexi_multiscale_pixel_lock_audit.json",
+    "high_resolution_scene_selection": "src/dust/examples/hexi_high_resolution_scene_selection.json"
+  }
+}

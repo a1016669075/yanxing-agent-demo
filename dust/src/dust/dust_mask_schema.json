@@ -1,0 +1,299 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "yanxing-agent/dust_mask_schema.json",
+  "title": "Dust mask and evidence output schema",
+  "type": "object",
+  "required": ["event_id", "tool_id", "sensor", "scale", "datetime", "aoi", "mask", "confidence", "evidence", "provenance"],
+  "properties": {
+    "event_id": { "type": "string" },
+    "tool_id": { "type": "string" },
+    "sensor": { "type": "string" },
+    "scale": { "enum": ["coarse", "medium", "high"] },
+    "datetime": { "type": "string" },
+    "aoi": {
+      "type": "object",
+      "required": ["bbox", "crs"],
+      "properties": {
+        "bbox": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": { "type": "number" }
+        },
+        "crs": { "type": "string" }
+      }
+    },
+    "mask": {
+      "type": "object",
+      "required": ["type", "path", "pixel_class", "threshold", "opacity", "color"],
+      "properties": {
+        "type": { "enum": ["raster", "png", "geojson", "inline-demo-grid", "rendered-raster-threshold-grid"] },
+        "path": { "type": "string" },
+        "pixel_class": { "type": "string" },
+        "threshold": { "type": ["number", "null"] },
+        "mask_area_km2": { "type": ["number", "null"] },
+        "opacity": { "type": "number" },
+        "color": { "type": "string" },
+        "display_grid": {
+          "type": "object",
+          "properties": {
+            "columns": { "type": "integer" },
+            "rows": { "type": "integer" },
+            "cells": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["x", "y", "p"],
+                "properties": {
+                  "x": { "type": "integer" },
+                  "y": { "type": "integer" },
+                  "p": { "type": "number" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "mask_layers": {
+      "type": "array",
+      "description": "Optional display and audit layers bound to the same scale, sensor, datetime and AOI.",
+      "items": {
+        "type": "object",
+        "required": ["id", "role", "tool_id", "pixel_class", "status", "mask"],
+        "properties": {
+          "id": { "type": "string" },
+          "role": {
+            "enum": ["candidate_support", "active_anomaly", "removed_candidate", "context"]
+          },
+          "tool_id": { "type": "string" },
+          "pixel_class": { "type": "string" },
+          "status": { "type": "string" },
+          "mask": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string" },
+              "threshold": { "type": ["number", "null"] },
+              "thresholds": { "type": "array" },
+              "mask_area_km2": { "type": ["number", "null"] },
+              "color": { "type": "string" },
+              "display_grid": { "type": "object" }
+            },
+            "additionalProperties": true
+          },
+          "limitations": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "decision_trace": {
+      "type": "array",
+      "description": "Optional ordered evidence-to-mask decision steps for explaining how candidate pixels become active anomaly pixels.",
+      "items": {
+        "type": "object",
+        "required": ["step_id", "tool_id", "operation", "input", "output", "status"],
+        "properties": {
+          "step_id": { "type": "string" },
+          "tool_id": { "type": "string" },
+          "operation": { "type": "string" },
+          "input": { "type": "array" },
+          "output": { "type": "string" },
+          "status": { "type": "string" },
+          "reason": { "type": "string" },
+          "limitations": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "derivation": {
+      "type": "object",
+      "properties": {
+        "method": { "type": "string" },
+        "status": { "type": "string" },
+        "source_image": { "type": "string" },
+        "source_layer": { "type": "string" },
+        "source_layers": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "sample_grid": { "type": "string" },
+        "threshold": { "type": ["number", "null"] },
+        "thresholds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "role": { "type": "string" },
+              "layer": { "type": "string" },
+              "threshold": { "type": "number" }
+            }
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "confidence": {
+      "type": "object",
+      "required": ["score", "level", "reason"],
+      "properties": {
+        "score": { "type": ["number", "null"] },
+        "level": { "enum": ["low", "medium", "high", "unknown"] },
+        "reason": { "type": "string" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["main", "supporting", "conflicting", "precursor"],
+      "properties": {
+        "main": { "type": "array" },
+        "supporting": { "type": "array" },
+        "conflicting": { "type": "array" },
+        "precursor": { "type": "array" }
+      }
+    },
+    "confounder_checks": {
+      "type": "array",
+      "description": "Optional smoke, fire, burned-area, cloud/background or temporal-mismatch checks. Unknown checks do not support dust interpretation.",
+      "items": {
+        "type": "object",
+        "required": ["id", "tool_id", "status", "result", "conflict_flag", "display_policy"],
+        "properties": {
+          "id": { "type": "string" },
+          "tool_id": { "type": "string" },
+          "status": { "type": "string" },
+          "result": { "type": "string" },
+          "conflict_flag": { "type": "string" },
+          "reasoning": { "type": "string" },
+          "display_policy": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "pixel_evidence_records": {
+      "type": "array",
+      "description": "Optional per-pixel/cell decision records used to explain why displayed anomaly pixels were kept or rejected.",
+      "items": {
+        "type": "object",
+        "required": ["id", "x", "y", "decision", "reasons"],
+        "properties": {
+          "id": { "type": "string" },
+          "x": { "type": "integer" },
+          "y": { "type": "integer" },
+          "display_probability": { "type": ["number", "null"] },
+          "evidence_score": { "type": ["number", "null"] },
+          "source_scores": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "role": { "type": "string" },
+                "score": { "type": "number" },
+                "threshold": { "type": "number" },
+                "passed": { "type": "boolean" }
+              },
+              "additionalProperties": true
+            }
+          },
+          "component_id": { "type": ["integer", "null"] },
+          "decision": { "type": "string" },
+          "reasons": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "scale_transition_trace": {
+      "type": "object",
+      "description": "Optional coarse-to-medium-to-high trace showing how the agent narrows an anomaly across sensors while preserving promotion blockers.",
+      "properties": {
+        "steps": { "type": "array" },
+        "transitions": { "type": "array" },
+        "transition_summary": { "type": "object" },
+        "display_policy": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "adapter_output_contracts": {
+      "type": "array",
+      "description": "Optional model-adapter output contracts that define what a runnable model must write before replacing a current support/demo red mask.",
+      "items": {
+        "type": "object",
+        "required": [
+          "adapter_id",
+          "tool_id",
+          "primary_role",
+          "target_scale",
+          "current_status",
+          "required_outputs",
+          "can_replace_current_red_mask_now",
+          "promotion_blockers",
+          "display_policy"
+        ],
+        "properties": {
+          "adapter_id": { "type": "string" },
+          "tool_id": { "type": "string" },
+          "primary_role": { "type": "string" },
+          "target_scale": { "type": "string" },
+          "satellite_or_sensor": { "type": "string" },
+          "current_status": { "type": "string" },
+          "current_ui_replacement_target": { "type": "string" },
+          "minimum_inputs": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "required_outputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "type", "required"],
+              "properties": {
+                "name": { "type": "string" },
+                "type": { "type": "string" },
+                "required": { "type": "boolean" }
+              },
+              "additionalProperties": true
+            }
+          },
+          "required_metadata": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "can_replace_current_red_mask_now": { "type": "boolean" },
+          "promotion_blockers": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "display_policy": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["model_name", "model_url", "data_source", "checkpoint", "run_time", "limitations"],
+      "properties": {
+        "model_name": { "type": "string" },
+        "model_url": { "type": "string" },
+        "data_source": { "type": "string" },
+        "checkpoint": { "type": "string" },
+        "run_time": { "type": "string" },
+        "limitations": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

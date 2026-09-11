@@ -1,0 +1,120 @@
+{
+  "round": "dust-round-041",
+  "tool_id": "hexi_real_gibs_data_run",
+  "status": "executed_real_gibs_data_export",
+  "current_aoi_inference": "data_tool_output_not_model_inference",
+  "actual_model_runs": [],
+  "event_id": "dust-hexi-corridor-2021-03-15",
+  "date": "2021-03-15",
+  "aoi": {
+    "bbox": [
+      94,
+      37.4,
+      104.5,
+      42.5
+    ],
+    "crs": "EPSG:4326",
+    "label": "Hexi Corridor, Gansu / Inner Mongolia margin"
+  },
+  "downloaded_products": [
+    {
+      "id": "airs_dust_score",
+      "layer": "AIRS_L2_Dust_Score_Day",
+      "sensor": "AIRS Aqua Dust Score",
+      "format": "image/png",
+      "transparent": true,
+      "file": "hexi_airs_dust_score_20210315.png",
+      "source_url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=AIRS_L2_Dust_Score_Day&STYLES=&FORMAT=image%2Fpng&TRANSPARENT=TRUE&SRS=EPSG%3A4326&WIDTH=1200&HEIGHT=670&BBOX=94%2C37.4%2C104.5%2C42.5&TIME=2021-03-15",
+      "local_path": "src/dust/examples/real-data/dust-round-041/hexi_airs_dust_score_20210315.png",
+      "bytes": 8710
+    },
+    {
+      "id": "viirs_corrected_reflectance",
+      "layer": "VIIRS_NOAA20_CorrectedReflectance_TrueColor",
+      "sensor": "VIIRS NOAA-20 Corrected Reflectance",
+      "format": "image/jpeg",
+      "transparent": false,
+      "file": "hexi_viirs_noaa20_corrected_reflectance_20210315.jpg",
+      "source_url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=VIIRS_NOAA20_CorrectedReflectance_TrueColor&STYLES=&FORMAT=image%2Fjpeg&TRANSPARENT=FALSE&SRS=EPSG%3A4326&WIDTH=1200&HEIGHT=670&BBOX=94%2C37.4%2C104.5%2C42.5&TIME=2021-03-15",
+      "local_path": "src/dust/examples/real-data/dust-round-041/hexi_viirs_noaa20_corrected_reflectance_20210315.jpg",
+      "bytes": 71522
+    },
+    {
+      "id": "viirs_deep_blue_aot",
+      "layer": "VIIRS_NOAA20_AOT_Deep_Blue_Best_Estimate",
+      "sensor": "VIIRS NOAA-20 Deep Blue AOT",
+      "format": "image/png",
+      "transparent": true,
+      "file": "hexi_viirs_noaa20_deep_blue_aot_20210315.png",
+      "source_url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=VIIRS_NOAA20_AOT_Deep_Blue_Best_Estimate&STYLES=&FORMAT=image%2Fpng&TRANSPARENT=TRUE&SRS=EPSG%3A4326&WIDTH=1200&HEIGHT=670&BBOX=94%2C37.4%2C104.5%2C42.5&TIME=2021-03-15",
+      "local_path": "src/dust/examples/real-data/dust-round-041/hexi_viirs_noaa20_deep_blue_aot_20210315.png",
+      "bytes": 28997
+    },
+    {
+      "id": "viirs_aerosol_type",
+      "layer": "VIIRS_NOAA20_Aerosol_Type_Deep_Blue_Best_Estimate",
+      "sensor": "VIIRS NOAA-20 Aerosol Type Deep Blue",
+      "format": "image/png",
+      "transparent": true,
+      "file": "hexi_viirs_noaa20_aerosol_type_20210315.png",
+      "source_url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=VIIRS_NOAA20_Aerosol_Type_Deep_Blue_Best_Estimate&STYLES=&FORMAT=image%2Fpng&TRANSPARENT=TRUE&SRS=EPSG%3A4326&WIDTH=1200&HEIGHT=670&BBOX=94%2C37.4%2C104.5%2C42.5&TIME=2021-03-15",
+      "local_path": "src/dust/examples/real-data/dust-round-041/hexi_viirs_noaa20_aerosol_type_20210315.png",
+      "bytes": 24775
+    },
+    {
+      "id": "modis_terra_corrected_reflectance",
+      "layer": "MODIS_Terra_CorrectedReflectance_TrueColor",
+      "sensor": "MODIS Terra Corrected Reflectance",
+      "format": "image/jpeg",
+      "transparent": false,
+      "file": "hexi_modis_terra_corrected_reflectance_20210315.jpg",
+      "source_url": "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=MODIS_Terra_CorrectedReflectance_TrueColor&STYLES=&FORMAT=image%2Fjpeg&TRANSPARENT=FALSE&SRS=EPSG%3A4326&WIDTH=1200&HEIGHT=670&BBOX=94%2C37.4%2C104.5%2C42.5&TIME=2021-03-15",
+      "local_path": "src/dust/examples/real-data/dust-round-041/hexi_modis_terra_corrected_reflectance_20210315.jpg",
+      "bytes": 74988
+    }
+  ],
+  "active_mask": {
+    "type": "png",
+    "path": "src/dust/examples/real-data/dust-round-041/hexi_viirs_active_red_pixel_mask_20210315.png",
+    "pixel_class": "dust_anomaly_support",
+    "source_layers": [
+      "VIIRS_NOAA20_AOT_Deep_Blue_Best_Estimate",
+      "VIIRS_NOAA20_Aerosol_Type_Deep_Blue_Best_Estimate"
+    ],
+    "columns": 120,
+    "rows": 58,
+    "active_red_pixels": 1369,
+    "mask_area_km2": 62614,
+    "threshold": 0.8,
+    "opacity": 0.55,
+    "color": "#ff0000",
+    "derivation": {
+      "method": "raw VIIRS Deep Blue L2 native geolocation footprint threshold",
+      "status": "executed_native_l2_footprint_mask",
+      "source_image": "src/dust/examples/raw-data/dust-round-040/AERDB_L2_VIIRS_NOAA20.A2021074.0536.002.2023081012548.nc",
+      "source_layer": "AOT550 + Aerosol_Type_Land_Ocean + QA_Flag_Land + Latitude/Longitude",
+      "sample_grid": "404x400 native swath",
+      "threshold": 0.8,
+      "thresholds": [
+        {
+          "role": "aerosol_type",
+          "threshold": "0=dust"
+        },
+        {
+          "role": "qa_land",
+          "threshold": ">= 2"
+        },
+        {
+          "role": "aot_550",
+          "threshold": ">= 0.8"
+        }
+      ],
+      "limitations": [
+        "Threshold adapter, not learned dust segmentation.",
+        "Footprint corners are estimated from adjacent geolocation centers.",
+        "Cloud/smoke/fire confounder model checks are not executed on this VIIRS swath."
+      ]
+    }
+  },
+  "display_policy": "Use these files as current-AOI real GIBS data and a data-derived support mask. This is not Dust-Mamba, VIIRS semantic segmentation, or MODIS 3D-CNN inference."
+}

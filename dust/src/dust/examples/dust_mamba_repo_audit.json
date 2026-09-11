@@ -1,0 +1,166 @@
+{
+  "round": "dust-round-032",
+  "tool_id": "dust_mamba_repo_audit_adapter",
+  "target_tool_id": "dust_mamba_adapter",
+  "status": "blocked_checkpoint_not_local",
+  "current_aoi_inference": "not_run",
+  "actual_model_runs": [],
+  "repositories": {
+    "dust_mamba": {
+      "url": "https://github.com/Zjut-MultimediaPlus/Dust-Mamba",
+      "local_path": "reports/dust-round-025/model-audit/Dust-Mamba",
+      "commit": "3f1f702442c1bd2675cb3d6c431e9f697d4e7f3b",
+      "cloned": true,
+      "code_file_count": 25
+    },
+    "lsdssimr": {
+      "url": "https://github.com/Zjut-MultimediaPlus/LSDSSIMR",
+      "local_path": "reports/dust-round-025/model-audit/LSDSSIMR",
+      "commit": "8c223f9d22a808a469df24914fdc772343688159",
+      "cloned": true
+    }
+  },
+  "checkpoint_audit": {
+    "readme_checkpoint_url": "https://pan.baidu.com/s/1BazQb4v8plLpTbmFODeCbg?pwd=khve",
+    "local_checkpoint_files": [],
+    "checkpoint_path_for_adapter": null,
+    "checkpoint_available_locally": false,
+    "note": "README points to BaiduYun checkpoints. Round 032 reached the Baidu share landing page, but no downloadable checkpoint file is local."
+  },
+  "input_contract": {
+    "dataset": "LSDSSIMR HDF5",
+    "catalog_rows": 5408,
+    "fy4a_temporal_resolution": "15 min",
+    "fy4a_spatial_resolution": "4 km",
+    "image_shape": {
+      "height": 448,
+      "width": 896
+    },
+    "satellite_channel_indices": [
+      0,
+      1,
+      6,
+      9,
+      10,
+      11
+    ],
+    "meteorology_channel_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "expected_input_channels": 18,
+    "hdf_groups_seen_in_loader": [
+      "others/DST_binary",
+      "others/DST"
+    ],
+    "satellite_source_keys": [
+      "R0.47",
+      "R0.65",
+      "R0.83",
+      "R1.37",
+      "R1.61",
+      "R2.22",
+      "BT3.72",
+      "BT6.25",
+      "BT7.10",
+      "BT8.50",
+      "BT10.8",
+      "BT12.0",
+      "BT13.5",
+      "SOZ"
+    ],
+    "meteorology_keys": [
+      "10m_eastward_wind_component",
+      "10m_northward_wind_component",
+      "2m_eastward_wind_component",
+      "2m_northward_wind_component",
+      "50m_eastward_wind_component",
+      "50m_northward_wind_component",
+      "10m_air_temperature",
+      "2m_air_temperature",
+      "2m_dewpoint_temperature",
+      "mean_sea_level_pressure",
+      "skin_temperature",
+      "surface_pressure",
+      "total_precipitation"
+    ],
+    "label_key": "others/DST",
+    "occurrence_rule_seen": "DST < 12 => 0, DST >= 12 => 1 in commented occurrence branch",
+    "intensity_bins_seen": [
+      "<12 background",
+      "12-15",
+      "15-17",
+      "17-19",
+      "19-21",
+      "21-23",
+      "23-24"
+    ]
+  },
+  "lsdssimr_data_audit": {
+    "readme_baiduyun_url": "https://pan.baidu.com/s/1eIsQZ_EUR2il-7pS0tU-bA?pwd=p4xw",
+    "readme_ieee_dataport_url": "https://ieee-dataport.org/documents/lsdssimr-large-scale-dust-storm-database-based-satellite-images-and-meteorologicall#",
+    "data_downloaded_locally": false,
+    "data_note": "LSDSSIMR README describes nearly 10,000 HDF5 files with FY-4A multi-channel data, dust scoring labels, MERRA-2 and ERA5. Round 032 reached BaiduYun and IEEE DataPort HTML pages, but no HDF5 event file was downloaded."
+  },
+  "round_032_access_attempt": {
+    "attempt_time": "2026-05-18T17:30:00+08:00",
+    "checkpoint_baiduyun_get": {
+      "url": "https://pan.baidu.com/s/1BazQb4v8plLpTbmFODeCbg?pwd=khve",
+      "status": 200,
+      "final_url": "https://pan.baidu.com/share/init?surl=BazQb4v8plLpTbmFODeCbg&pwd=khve",
+      "content_type": "text/html; charset=utf-8",
+      "result": "share landing page only; no local .pth checkpoint produced"
+    },
+    "lsdssimr_baiduyun_get": {
+      "url": "https://pan.baidu.com/s/1eIsQZ_EUR2il-7pS0tU-bA?pwd=p4xw",
+      "status": 200,
+      "final_url": "https://pan.baidu.com/share/init?surl=eIsQZ_EUR2il-7pS0tU-bA&pwd=p4xw",
+      "content_type": "text/html; charset=utf-8",
+      "result": "share landing page only; no local HDF5 file produced"
+    },
+    "lsdssimr_ieee_dataport_get": {
+      "url": "https://ieee-dataport.org/documents/lsdssimr-large-scale-dust-storm-database-based-satellite-images-and-meteorologicall",
+      "status": 200,
+      "content_type": "text/html; charset=UTF-8",
+      "result": "metadata page reachable; dataset file download not available in this environment"
+    },
+    "can_run_now": false,
+    "blockers": [
+      "Dust-Mamba checkpoint is not local.",
+      "LSDSSIMR HDF5 event sample is not local.",
+      "Local Python is 3.12.10 while Dust-Mamba README requires Python 3.8.8, PyTorch 1.13.0 and CUDA 11.7."
+    ]
+  },
+  "adapter_output_contract": {
+    "occurrence_mask": "occurrence_mask.tif or png mask",
+    "intensity_mask": "intensity_mask.tif or png mask",
+    "probability_map": "probability_map or confidence_map",
+    "metadata_json": [
+      "model_name",
+      "source_url",
+      "checkpoint_path",
+      "input_channels",
+      "satellite_time",
+      "aoi",
+      "threshold",
+      "mask_area_km2",
+      "confidence_summary"
+    ]
+  },
+  "promotion_decision": {
+    "can_run_local_inference_now": false,
+    "can_promote_to_current_aoi_dust_mask": false,
+    "reason": "Repository code and catalog are local, but checkpoint files and LSDSSIMR HDF5 event data are not local. Round 032 reached the external landing pages but did not obtain model/data files. Current red masks must remain rendered-product support evidence."
+  },
+  "display_policy": "Show Dust-Mamba as P0 main detector with repository/checkpoint/data audit status. Do not display any current AOI mask as Dust-Mamba output until checkpoint and LSDSSIMR HDF5 inputs are present and inference runs."
+}

@@ -1,0 +1,151 @@
+{
+  "event_id": "dust-hexi-corridor-2021-03-15",
+  "tool_id": "viirs_sandstorm_segmentation_adapter",
+  "sensor": "VIIRS NOAA-20 Corrected Reflectance",
+  "scale": "medium",
+  "datetime": "2021-03-15T06:00:00Z",
+  "aoi": {
+    "bbox": [94.0, 37.4, 104.5, 42.5],
+    "crs": "EPSG:4326"
+  },
+  "mask": {
+    "type": "inline-demo-grid",
+    "path": "inline:demo-pixel-grid",
+    "pixel_class": "dust_anomaly",
+    "threshold": 0.5,
+    "mask_area_km2": 184320,
+    "opacity": 0.45,
+    "color": "#ff0000",
+    "display_grid": {
+      "columns": 42,
+      "rows": 24,
+      "cells": []
+    }
+  },
+  "confidence": {
+    "score": null,
+    "level": "unknown",
+    "reason": "This is a demo visualization mask for UI layout only. No model inference was executed in this round."
+  },
+  "evidence": {
+    "main": [
+      "VIIRS corrected reflectance basemap is requested from NASA GIBS.",
+      "Red pixel-level mask is shown as demo visualization, not model output."
+    ],
+    "supporting": [
+      "Deep Blue / Aerosol Type evidence slot is registered but not pulled in this page.",
+      "Wind and humidity evidence slots are present and marked unknown."
+    ],
+    "conflicting": [
+      "Smoke, active fire and burned-area tools are registered as confounder checks only."
+    ],
+    "precursor": [
+      "Dry bare-soil corridor and transport evidence require ERA5/MERRA-2 integration in the next round."
+    ]
+  },
+  "confounder_checks": [
+    {
+      "id": "smoke_plume_check",
+      "tool_id": "smoke_plume_confounder_adapter",
+      "status": "research_reference_not_executed",
+      "result": "unknown",
+      "conflict_flag": "unknown",
+      "reasoning": "Smoke segmentation was not run for this AOI/time.",
+      "display_policy": "Unknown smoke checks do not support the dust interpretation."
+    },
+    {
+      "id": "sentinel2_temporal_mismatch_check",
+      "tool_id": "hexi_high_resolution_scene_selector",
+      "status": "executed_context_selection",
+      "result": "fail_for_same_day_inference",
+      "conflict_flag": "true_for_promotion",
+      "reasoning": "The high-resolution Sentinel-2 context image is not same-day event imagery.",
+      "display_policy": "High-resolution red cells remain demo/supporting-only until same-day or declared-window inference is available."
+    }
+  ],
+  "pixel_evidence_records": [
+    {
+      "id": "m_00_00",
+      "x": 0,
+      "y": 0,
+      "display_probability": null,
+      "evidence_score": null,
+      "source_scores": [],
+      "component_id": null,
+      "decision": "schema_example_only",
+      "reasons": [
+        "real adapters should record per-pixel source scores and keep/reject decisions",
+        "this example remains a demo visualization and not model inference"
+      ]
+    }
+  ],
+  "scale_transition_trace": {
+    "steps": [],
+    "transitions": [],
+    "transition_summary": {
+      "model_promotion": "blocked"
+    },
+    "display_policy": "Optional field for coarse-to-medium-to-high agent trace; not model inference by itself."
+  },
+  "adapter_output_contracts": [
+    {
+      "adapter_id": "VIIRSSandstormSegmentationAdapter",
+      "tool_id": "viirs_sandstorm_segmentation_adapter",
+      "primary_role": "main_dust_detection",
+      "target_scale": "medium",
+      "satellite_or_sensor": "VIIRS corrected reflectance",
+      "current_status": "research_reference",
+      "current_ui_replacement_target": "medium shape-filtered red support pixels",
+      "minimum_inputs": [
+        "VIIRS corrected reflectance scene",
+        "runnable VIIRS dust semantic segmentation code and weights"
+      ],
+      "required_outputs": [
+        {
+          "name": "dust_probability_map",
+          "type": "tif|png|npy",
+          "required": true
+        },
+        {
+          "name": "binary_dust_mask",
+          "type": "tif|png|geojson",
+          "required": true
+        },
+        {
+          "name": "metadata_json",
+          "type": "json",
+          "required": true
+        }
+      ],
+      "required_metadata": [
+        "model_name",
+        "source_url",
+        "input_scene",
+        "satellite_time",
+        "aoi",
+        "threshold",
+        "mask_area_km2",
+        "confidence_summary"
+      ],
+      "can_replace_current_red_mask_now": false,
+      "promotion_blockers": [
+        "no runnable VIIRS model connected",
+        "current red pixels are support evidence only"
+      ],
+      "display_policy": "Do not promote this schema example to model inference."
+    }
+  ],
+  "provenance": {
+    "model_name": "VIIRS Sandstorm Segmentation Adapter placeholder",
+    "model_url": "https://element84.com/machine-learning/segmenting-sandstorms-in-satellite-imagery/",
+    "data_source": "NASA GIBS VIIRS corrected reflectance basemap plus inline demo grid",
+    "checkpoint": "not available",
+    "run_time": "not run",
+    "limitations": [
+      "demo visualization",
+      "not model inference",
+      "for layout only",
+      "public code or weights were not found in this round"
+    ]
+  }
+}

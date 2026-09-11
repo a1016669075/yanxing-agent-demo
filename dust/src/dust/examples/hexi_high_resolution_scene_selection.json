@@ -1,0 +1,76 @@
+{
+  "round": "dust-round-037",
+  "tool_id": "hexi_high_resolution_scene_selector",
+  "status": "executed_same_day_scene_selection",
+  "current_aoi_inference": "not_model_inference",
+  "actual_model_runs": [],
+  "event_id": "hexi-corridor-2021-03-15",
+  "selection_policy": "Select a same-day Sentinel-2 L2A COG scene with AOT, B04, B08, SCL and TCI assets for high-resolution source/confounder support. This improves high-resolution evidence only and is not dust segmentation.",
+  "selected": {
+    "id": "S2A_46SEJ_20210315_2_L2A",
+    "datetime": "2021-03-15T04:47:36.583Z",
+    "cloud_cover": 62.87927,
+    "grid_code": "MGRS-46SEJ",
+    "bbox": [
+      92.99977821837051,
+      38.755690205950245,
+      94.28126851320825,
+      39.750258916394806
+    ],
+    "visual_url": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/46/S/EJ/2021/3/S2A_46SEJ_20210315_2_L2A/TCI.tif",
+    "aot_url": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/46/S/EJ/2021/3/S2A_46SEJ_20210315_2_L2A/AOT.tif",
+    "red_url": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/46/S/EJ/2021/3/S2A_46SEJ_20210315_2_L2A/B04.tif",
+    "nir_url": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/46/S/EJ/2021/3/S2A_46SEJ_20210315_2_L2A/B08.tif",
+    "scl_url": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/46/S/EJ/2021/3/S2A_46SEJ_20210315_2_L2A/SCL.tif",
+    "temporal_offset_days": 0,
+    "local_thumbnail_path": "src/dust/examples/high/sentinel2_hexi_high_context_s2a_46sej_20210315_2_l2a.png",
+    "metrics": {
+      "natural_width": 687,
+      "natural_height": 687,
+      "valid_ratio": 0.4357,
+      "white_ratio": 0.5614,
+      "dark_ratio": 0.0029,
+      "colored_ratio": 0.35
+    },
+    "score": 43.57,
+    "sampled_support_cells": 360,
+    "sampled_valid_cells": 8463,
+    "display_policy": "Use as same-day high-resolution source-region and confounder context only. It is not a dust segmentation model output."
+  },
+  "rejected_summary": [
+    {
+      "id": "S2B_48SUG_20210315_1_L2A",
+      "datetime": "2021-03-15T03:57:53.802Z",
+      "cloud_cover": 19.852564,
+      "rejected_reason": "same-day but fewer AOT+NDVI support cells in audit grid",
+      "sampled_support_cells": 16
+    },
+    {
+      "id": "S2B_48SUG_20210315_0_L2A",
+      "datetime": "2021-03-15T03:57:53.801Z",
+      "cloud_cover": 39.930384,
+      "rejected_reason": "same-day but fewer AOT+NDVI support cells in audit grid",
+      "sampled_support_cells": 23
+    },
+    {
+      "id": "S2A_46SFJ_20210315_2_L2A",
+      "datetime": "2021-03-15T04:47:31.407Z",
+      "cloud_cover": 55.534482,
+      "rejected_reason": "same-day but fewer valid sampled cells than selected SEJ tile",
+      "sampled_support_cells": 28
+    }
+  ],
+  "query": {
+    "collections": ["sentinel-2-l2a"],
+    "bbox": [94, 37.4, 104.5, 42.5],
+    "datetime": "2021-03-15T00:00:00Z/2021-03-15T23:59:59Z",
+    "limit": 100,
+    "source": "https://earth-search.aws.element84.com/v1/search"
+  },
+  "limitations": [
+    "Scene selection is a real data-selection and COG-sampling audit, not dust classification.",
+    "Selected scene is same-day but has 62.87927% cloud cover and a partial western-edge footprint.",
+    "SCL-screened AOT/B04/B08 support cells are source/confounder evidence only.",
+    "No Sentinel-2 dust or smoke/fire/burned-area model was executed."
+  ]
+}

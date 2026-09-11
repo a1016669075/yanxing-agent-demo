@@ -1,0 +1,257 @@
+{
+  "round": "dust-round-037",
+  "status": "Hexi Corridor AOI bound; multi-scale PNG mask assets, pixel-lock GeoJSON, medium precision GeoJSON, adapter output contracts, model audits and evidence panels are active; high now uses same-day SCL-screened Sentinel-2 COG support",
+  "note": "Round 037 improves high-resolution pixel precision with same-day Sentinel-2 AOT/B04/B08/SCL COG sampling while preserving not-model-inference provenance.",
+  "case_path": "src/dust/examples/hexi_corridor_case.json",
+  "dust_mamba_repo_audit_path": "src/dust/examples/dust_mamba_repo_audit.json",
+  "pixel_precision_audit_path": "src/dust/examples/hexi_pixel_precision_audit.json",
+  "medium_pixel_geojson_path": "src/dust/examples/hexi_medium_pixel_mask_cells.geojson",
+  "sensor_model_gate_path": "src/dust/examples/dust_sensor_model_gate.json",
+  "model_contract_audit_path": "src/dust/examples/dust_model_contract_audit.json",
+  "modis_3dcnn_input_contract_path": "src/dust/examples/modis_3dcnn_input_contract.json",
+  "model_adapter_output_contracts_path": "src/dust/examples/dust_model_adapter_output_contracts.json",
+  "outputs": [
+    {
+      "scale": "coarse",
+      "tool_id": "gibs_rendered_dust_score_threshold_adapter",
+      "sensor": "AIRS Aqua Dust Score / MODIS context",
+      "data_source": "NASA GIBS AIRS_L2_Dust_Score_Day",
+      "mask_status": "rendered-product threshold, not model inference, not raw scientific values",
+      "model_binding": "Dust-Mamba target adapter plus AIRS Dust Score support"
+    },
+    {
+      "scale": "medium",
+      "tool_id": "gibs_rendered_plume_shape_filter_adapter",
+      "sensor": "VIIRS NOAA-20 Corrected Reflectance",
+      "data_source": "NASA GIBS VIIRS_NOAA20_CorrectedReflectance_TrueColor; mask_source=VIIRS_NOAA20_AOT_Deep_Blue_Best_Estimate + VIIRS_NOAA20_Aerosol_Type_Deep_Blue_Best_Estimate",
+      "mask_status": "shape-filtered rendered-product intersection, not model inference, not raw AOT or aerosol-type scientific values",
+      "model_binding": "VIIRS-specific sandstorm semantic segmentation adapter remains research_reference; AOT + Aerosol Type intersection plus plume-shape filtering is supportive aerosol evidence",
+      "modis_3dcnn_local_audit": {
+        "tool_id": "modis_3dcnn_dust_adapter",
+        "status": "checkpoint_available_but_data_missing",
+        "current_aoi_inference": "not_run",
+        "audit_path": "src/dust/examples/modis_3dcnn_local_audit.json",
+        "input_contract_path": "src/dust/examples/modis_3dcnn_input_contract.json",
+        "selected_reference_case": "T2025086.0420",
+        "selected_accuracy": 0.82,
+        "overall_accuracy": 0.954,
+        "display_policy": "Show as MODIS model-readiness evidence only. Do not use the pre-generated prediction image as current AOI dust evidence."
+      },
+      "mask_layers": [
+        {
+          "id": "medium_aot_only_candidate_support",
+          "role": "candidate_support",
+          "tool_id": "gibs_rendered_deep_blue_threshold_adapter",
+          "pixel_class": "dust_candidate_support",
+          "status": "executed rendered-product threshold",
+          "source_layer": "VIIRS_NOAA20_AOT_Deep_Blue_Best_Estimate",
+          "threshold": 0.52,
+          "mask_cells": 28,
+          "mask_area_km2": 5120,
+          "display_policy": "Show as candidate support only; do not label as confirmed dust anomaly."
+        },
+        {
+          "id": "medium_aot_aerosol_type_active_anomaly",
+          "role": "active_anomaly",
+          "tool_id": "gibs_rendered_aot_aerosol_type_intersection_adapter",
+          "pixel_class": "dust_anomaly",
+          "status": "executed rendered-product intersection",
+          "source_layers": [
+            "VIIRS_NOAA20_AOT_Deep_Blue_Best_Estimate",
+            "VIIRS_NOAA20_Aerosol_Type_Deep_Blue_Best_Estimate"
+          ],
+          "thresholds": [
+            {
+              "role": "aot",
+              "threshold": 0.52
+            },
+            {
+              "role": "aerosol_type",
+              "threshold": 0.6
+            }
+          ],
+          "mask_cells": 5,
+          "mask_area_km2": 914,
+          "display_policy": "Show as current active red anomaly support mask; still not model inference."
+        },
+        {
+          "id": "medium_shape_filtered_active_anomaly",
+          "role": "active_anomaly",
+          "tool_id": "gibs_rendered_plume_shape_filter_adapter",
+          "pixel_class": "dust_anomaly",
+          "status": "executed shape-filtered rendered-product postprocess",
+          "source_layers": [
+            "VIIRS_NOAA20_AOT_Deep_Blue_Best_Estimate",
+            "VIIRS_NOAA20_Aerosol_Type_Deep_Blue_Best_Estimate"
+          ],
+          "input_mask_cells": 5,
+          "mask_cells": 5,
+          "removed_by_shape": 0,
+          "component_count": 5,
+          "kept_component_count": 5,
+          "mask_area_km2": 914,
+          "display_policy": "Show as the default medium-scale red anomaly support mask; still not model inference."
+        },
+        {
+          "id": "medium_removed_candidate_pixels",
+          "role": "removed_candidate",
+          "tool_id": "gibs_rendered_aot_removed_candidate_view",
+          "pixel_class": "removed_candidate_pixel",
+          "status": "executed comparison view",
+          "source_layers": [
+            "VIIRS_NOAA20_AOT_Deep_Blue_Best_Estimate",
+            "VIIRS_NOAA20_Aerosol_Type_Deep_Blue_Best_Estimate"
+          ],
+          "mask_cells": 23,
+          "mask_area_km2": 4206,
+          "display_policy": "Show as precision audit layer only; these pixels are not active dust anomalies."
+        }
+      ],
+      "decision_trace": [
+        {
+          "step_id": "medium_01_candidate_from_aot",
+          "tool_id": "gibs_rendered_deep_blue_threshold_adapter",
+          "operation": "threshold rendered VIIRS Deep Blue AOT support pixels",
+          "input": [
+            "VIIRS_NOAA20_AOT_Deep_Blue_Best_Estimate"
+          ],
+          "output": "28 candidate support pixels",
+          "status": "executed",
+          "reason": "AOT-only is useful for first candidate extraction but is too broad for active anomaly display."
+        },
+        {
+          "step_id": "medium_02_intersect_aerosol_type",
+          "tool_id": "gibs_rendered_aot_aerosol_type_intersection_adapter",
+          "operation": "intersect AOT support with Aerosol Type rendered support",
+          "input": [
+            "medium_aot_only_candidate_support",
+            "VIIRS_NOAA20_Aerosol_Type_Deep_Blue_Best_Estimate"
+          ],
+          "output": "5 active anomaly support pixels",
+          "status": "executed",
+          "reason": "Only pixels supported by both rendered products remain red in the active medium-scale mask."
+        },
+        {
+          "step_id": "medium_03_shape_filter_active_mask",
+          "tool_id": "gibs_rendered_plume_shape_filter_adapter",
+          "operation": "remove isolated components from the AOT + Aerosol Type intersection",
+          "input": [
+            "medium_aot_aerosol_type_active_anomaly"
+          ],
+          "output": "5 default active red pixels",
+          "status": "executed shape-filtered rendered-product postprocess",
+          "reason": "The shape filter ran as a precision gate, but no additional pixels were removed for this Hexi AOI under the current connected-component rule."
+        },
+        {
+          "step_id": "medium_04_removed_candidate_audit",
+          "tool_id": "gibs_rendered_aot_removed_candidate_view",
+          "operation": "subtract active intersection from AOT-only candidate set",
+          "input": [
+            "medium_aot_only_candidate_support",
+            "medium_aot_aerosol_type_active_anomaly"
+          ],
+          "output": "23 removed candidate pixels",
+          "status": "executed comparison view",
+          "reason": "Removed pixels explain the precision tightening process and must not be treated as dust anomalies."
+        }
+      ]
+    },
+    {
+      "scale": "high",
+      "tool_id": "sentinel_high_resolution_context",
+      "sensor": "Sentinel-2 L2A selected thumbnail",
+      "data_source": "Earth Search STAC S2A_46SEJ_20210315_2_L2A",
+      "mask_status": "same-day SCL-screened Sentinel-2 AOT/B04/B08 support / not model inference",
+      "model_binding": "Sentinel-2 confounder/source-region interpretation adapters",
+      "high_resolution_audit": {
+        "event_date": "2021-03-15",
+        "imagery_date": "2021-03-15",
+        "temporal_offset_days": 0,
+        "stac_search_status": "round 037 uses the same-day Earth Search Sentinel-2 L2A COG assets and adds SCL screening over the Hexi Corridor case",
+        "stac_search_summary": {
+          "earth_search": {
+            "item_count": 6,
+            "filtered_out_count": 0,
+            "pages_fetched": 1
+          },
+          "copernicus_stac": {
+            "item_count": 0,
+            "filtered_out_count": 0,
+            "pages_fetched": 0
+          }
+        },
+        "search_candidates": [
+          {
+            "provider": "Earth Search v1",
+            "item": "S2B_48SUG_20210315_1_L2A",
+            "datetime": "2021-03-15T04:17:42.953Z",
+            "cloud_cover": 37.141715,
+            "temporal_offset_days": 0,
+            "role": "same-day candidate with fewer sampled support cells"
+          },
+          {
+            "provider": "Earth Search v1",
+            "item": "S2A_46SFJ_20210315_2_L2A",
+            "datetime": "2021-03-15T04:47:39.645Z",
+            "cloud_cover": 58.119768,
+            "temporal_offset_days": 0,
+            "role": "same-day candidate with 28 sampled support cells"
+          },
+          {
+            "provider": "Earth Search v1",
+            "item": "S2A_46SEJ_20210315_2_L2A",
+            "datetime": "2021-03-15T04:47:36.583Z",
+            "cloud_cover": 62.87927,
+            "temporal_offset_days": 0,
+            "role": "selected same-day support scene with 360 SCL-screened sampled support cells"
+          }
+        ],
+        "current_mask_status": "same-day SCL-screened supporting evidence only",
+        "display_policy": "Use selected high-resolution view for source-region, surface and confounder interpretation only. Do not present it as Sentinel-2 dust segmentation.",
+        "source_item": "S2A_46SEJ_20210315_2_L2A",
+        "imagery_datetime": "2021-03-15T04:47:36.583Z"
+      },
+      "raw_aot_cog_audit": {
+        "tool_id": "sentinel2_raw_aot_cog_audit_adapter",
+        "status": "executed SCL-screened raw AOT + B04/B08 COG sampling audit",
+        "source_item": "S2A_46SEJ_20210315_2_L2A",
+        "source_url": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/46/S/EJ/2021/3/S2A_46SEJ_20210315_2_L2A/AOT.tif",
+        "event_date": "2021-03-15",
+        "imagery_datetime": "2021-03-15T04:47:36.583Z",
+        "temporal_offset_days": 0,
+        "grid": {
+          "columns": 160,
+          "rows": 160,
+          "valid_cells": 8463,
+          "support_cells": 360,
+          "threshold_quantile": 0.95,
+          "threshold_value": 777
+        },
+        "stats": {
+          "valid_count": 8463,
+          "min": 527,
+          "q50": 621,
+          "q75": 656,
+          "q90": 734,
+          "q95": 777,
+          "q98": 816,
+          "max": 863,
+          "mean": 624.756,
+          "stdev": 74.241
+        },
+        "display_policy": "Show red support cells only as same-day SCL-screened high-resolution context. Do not label them as Sentinel-2 dust model inference.",
+        "limitations": [
+          "Sentinel-2 scene is same-day but cloudy and partly off the strongest plume area.",
+          "SCL removes cloud, cloud shadow, water, snow/ice and invalid classes before AOT + NDVI source support is displayed.",
+          "AOT and NDVI source support are not dust/not-dust semantic segmentation.",
+          "No Sentinel-2 dust model was executed."
+        ]
+      }
+    }
+  ],
+  "multiscale_pixel_lock_audit_path": "src/dust/examples/hexi_multiscale_pixel_lock_audit.json",
+  "multiscale_pixel_geojson_path": "src/dust/examples/hexi_multiscale_pixel_masks.geojson",
+  "mask_asset_manifest_path": "src/dust/examples/hexi_mask_asset_manifest.json",
+  "composite_overlay_manifest_path": "src/dust/examples/hexi_composite_overlay_manifest.json",
+  "high_resolution_scene_selection_path": "src/dust/examples/hexi_high_resolution_scene_selection.json"
+}

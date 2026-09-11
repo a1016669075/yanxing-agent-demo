@@ -1,0 +1,71 @@
+{
+  "round": "dust-round-037",
+  "purpose": "Prevent cross-sensor model mixing and prevent support/demo layers from being promoted to real red dust anomaly masks.",
+  "promotion_criteria": [
+    "same_sensor_or_documented_transfer",
+    "current_aoi_overlap",
+    "event_time_or_declared_temporal_window",
+    "model_output_matches_dust_mask_schema",
+    "confidence_or_threshold_declared",
+    "supporting_evidence_recorded",
+    "confounder_checks_recorded"
+  ],
+  "bindings": [
+    {
+      "id": "coarse_dust_mamba_gate",
+      "scale": "coarse",
+      "display_sensor": "AIRS Aqua Dust Score / MODIS context",
+      "target_model": "dust_mamba_adapter",
+      "required_sensor_or_input": "FY-4A AGRI multi-channel + MERRA-2 / ERA5 via LSDSSIMR",
+      "current_mask_tool": "gibs_rendered_dust_score_threshold_adapter",
+      "current_mask_status": "rendered-product support mask",
+      "current_ui_overlay": "red support mask",
+      "gate_decision": "support_only",
+      "can_promote_to_real_dust_mask": false,
+      "reason": "Round 030 keeps Dust-Mamba and LSDSSIMR audits active, but checkpoint files and LSDSSIMR HDF5 inputs are still not local; current red pixels are rendered AIRS Dust Score support, not model inference.",
+      "next_required_action": "Download/verify Dust-Mamba checkpoint and a small LSDSSIMR/FY-4A event sample before the coarse mask can be model output."
+    },
+    {
+      "id": "medium_viirs_segmentation_gate",
+      "scale": "medium",
+      "display_sensor": "VIIRS NOAA-20 Corrected Reflectance",
+      "target_model": "viirs_sandstorm_segmentation_adapter",
+      "required_sensor_or_input": "VIIRS corrected reflectance imagery with a runnable sandstorm segmentation model",
+      "current_mask_tool": "gibs_rendered_plume_shape_filter_adapter",
+      "current_mask_status": "shape-filtered rendered AOT + Aerosol Type support mask",
+      "current_ui_overlay": "red active support mask",
+      "gate_decision": "support_only",
+      "can_promote_to_real_dust_mask": false,
+      "reason": "Current medium red pixels are same-sensor VIIRS support evidence, but no runnable VIIRS dust segmentation weights/code are connected.",
+      "next_required_action": "Connect a VIIRS-specific dust semantic segmentation model or a documented sensor-specific algorithm before the medium red mask is promoted."
+    },
+    {
+      "id": "medium_modis_3dcnn_gate",
+      "scale": "medium",
+      "display_sensor": "MODIS Terra/Aqua multispectral",
+      "target_model": "modis_3dcnn_dust_adapter",
+      "required_sensor_or_input": "processed .npy MODIS multispectral tensors",
+      "current_mask_tool": "modis_3dcnn_dust_adapter",
+      "current_mask_status": "model_ready_reference_only",
+      "current_ui_overlay": "no current AOI red mask from this model",
+      "gate_decision": "blocked_by_input",
+      "can_promote_to_real_dust_mask": false,
+      "reason": "Checkpoint and evaluation artifacts are local, but processed .npy inputs for the current AOI are missing.",
+      "next_required_action": "Create or obtain a small processed MODIS input package and run actual inference before displaying MODIS model pixels as red dust anomalies."
+    },
+    {
+      "id": "high_sentinel2_gate",
+      "scale": "high",
+      "display_sensor": "Sentinel-2 L2A",
+      "target_model": "sentinel2_dust_or_confounder_adapter",
+      "required_sensor_or_input": "same-event Sentinel-2 image and a Sentinel-2-specific dust/confounder segmentation model",
+      "current_mask_tool": "sentinel2_raw_aot_cog_audit_adapter",
+      "current_mask_status": "same-day SCL-screened raw Sentinel-2 AOT/B04/B08 support audit",
+      "current_ui_overlay": "red same-day SCL-screened support cells, not Sentinel-2 dust model output",
+      "gate_decision": "demo_or_support_only",
+      "can_promote_to_real_dust_mask": false,
+      "reason": "The Sentinel-2 COG audit now uses same-day S2A_46SEJ_20210315_2_L2A AOT/B04/B08/SCL data, but AOT is aerosol support and no Sentinel-2 dust/not-dust segmentation model was executed.",
+      "next_required_action": "Connect a Sentinel-2-specific dust/confounder model before any high-resolution red mask is promoted to real dust inference."
+    }
+  ]
+}

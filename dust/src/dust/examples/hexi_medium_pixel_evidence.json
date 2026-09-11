@@ -1,0 +1,674 @@
+{
+  "round": "dust-round-028",
+  "tool_id": "hexi_medium_pixel_evidence_table_adapter",
+  "event_id": "dust-hexi-corridor-medium-2021-03",
+  "sensor": "VIIRS NOAA-20 Corrected Reflectance",
+  "scale": "medium",
+  "datetime": "2021-03-15T06:00:00Z",
+  "actual_model_runs": [],
+  "status": "executed_display_pixel_evidence_table",
+  "current_aoi_inference": "not_model_inference",
+  "precision_summary": {
+    "aot_only_candidate_pixels": 28,
+    "aot_aerosol_type_intersection_pixels": 5,
+    "shape_filtered_active_pixels": 5,
+    "removed_by_aerosol_type_gate": 23,
+    "removed_by_shape_filter": 0,
+    "active_mask_area_km2": 914,
+    "active_components": 5,
+    "meteorology_context": "SW (241.5 deg)"
+  },
+  "active_pixels": [
+    {
+      "id": "m_41_00",
+      "x": 41,
+      "y": 0,
+      "display_probability": 0.76,
+      "evidence_score": 0.765,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.765,
+          "threshold": 0.52,
+          "passed": true
+        },
+        {
+          "role": "aerosol_type",
+          "score": 0.89,
+          "threshold": 0.6,
+          "passed": true
+        }
+      ],
+      "component_id": 1,
+      "estimated_area_km2": 182.8,
+      "decision": "kept_as_active_red_pixel",
+      "reasons": [
+        "passed VIIRS rendered Deep Blue AOT support threshold",
+        "passed VIIRS rendered Aerosol Type support threshold",
+        "kept by connected-component plume-shape filter"
+      ]
+    },
+    {
+      "id": "m_06_13",
+      "x": 6,
+      "y": 13,
+      "display_probability": 0.71,
+      "evidence_score": 0.714,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.714,
+          "threshold": 0.52,
+          "passed": true
+        },
+        {
+          "role": "aerosol_type",
+          "score": 0.764,
+          "threshold": 0.6,
+          "passed": true
+        }
+      ],
+      "component_id": 2,
+      "estimated_area_km2": 182.8,
+      "decision": "kept_as_active_red_pixel",
+      "reasons": [
+        "passed VIIRS rendered Deep Blue AOT support threshold",
+        "passed VIIRS rendered Aerosol Type support threshold",
+        "kept by connected-component plume-shape filter"
+      ]
+    },
+    {
+      "id": "m_03_20",
+      "x": 3,
+      "y": 20,
+      "display_probability": 0.63,
+      "evidence_score": 0.629,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.841,
+          "threshold": 0.52,
+          "passed": true
+        },
+        {
+          "role": "aerosol_type",
+          "score": 0.629,
+          "threshold": 0.6,
+          "passed": true
+        }
+      ],
+      "component_id": 3,
+      "estimated_area_km2": 182.8,
+      "decision": "kept_as_active_red_pixel",
+      "reasons": [
+        "passed VIIRS rendered Deep Blue AOT support threshold",
+        "passed VIIRS rendered Aerosol Type support threshold",
+        "kept by connected-component plume-shape filter"
+      ]
+    },
+    {
+      "id": "m_13_21",
+      "x": 13,
+      "y": 21,
+      "display_probability": 0.63,
+      "evidence_score": 0.626,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.626,
+          "threshold": 0.52,
+          "passed": true
+        },
+        {
+          "role": "aerosol_type",
+          "score": 0.661,
+          "threshold": 0.6,
+          "passed": true
+        }
+      ],
+      "component_id": 4,
+      "estimated_area_km2": 182.8,
+      "decision": "kept_as_active_red_pixel",
+      "reasons": [
+        "passed VIIRS rendered Deep Blue AOT support threshold",
+        "passed VIIRS rendered Aerosol Type support threshold",
+        "kept by connected-component plume-shape filter"
+      ]
+    },
+    {
+      "id": "m_08_22",
+      "x": 8,
+      "y": 22,
+      "display_probability": 0.6,
+      "evidence_score": 0.601,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.799,
+          "threshold": 0.52,
+          "passed": true
+        },
+        {
+          "role": "aerosol_type",
+          "score": 0.601,
+          "threshold": 0.6,
+          "passed": true
+        }
+      ],
+      "component_id": 5,
+      "estimated_area_km2": 182.8,
+      "decision": "kept_as_active_red_pixel",
+      "reasons": [
+        "passed VIIRS rendered Deep Blue AOT support threshold",
+        "passed VIIRS rendered Aerosol Type support threshold",
+        "kept by connected-component plume-shape filter"
+      ]
+    }
+  ],
+  "removed_by_shape": [],
+  "removed_by_aerosol_type_gate": [
+    {
+      "id": "m_05_13",
+      "x": 5,
+      "y": 13,
+      "display_probability": 0.53,
+      "evidence_score": 0.529,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.529,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_15_15",
+      "x": 15,
+      "y": 15,
+      "display_probability": 0.68,
+      "evidence_score": 0.682,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.682,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_13_16",
+      "x": 13,
+      "y": 16,
+      "display_probability": 0.55,
+      "evidence_score": 0.552,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.552,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_18_16",
+      "x": 18,
+      "y": 16,
+      "display_probability": 0.58,
+      "evidence_score": 0.577,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.577,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_19_16",
+      "x": 19,
+      "y": 16,
+      "display_probability": 0.69,
+      "evidence_score": 0.694,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.694,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_10_17",
+      "x": 10,
+      "y": 17,
+      "display_probability": 0.65,
+      "evidence_score": 0.648,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.648,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_03_21",
+      "x": 3,
+      "y": 21,
+      "display_probability": 0.81,
+      "evidence_score": 0.813,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.813,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_02_22",
+      "x": 2,
+      "y": 22,
+      "display_probability": 0.63,
+      "evidence_score": 0.629,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.629,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_03_22",
+      "x": 3,
+      "y": 22,
+      "display_probability": 0.84,
+      "evidence_score": 0.837,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.837,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_04_22",
+      "x": 4,
+      "y": 22,
+      "display_probability": 0.61,
+      "evidence_score": 0.605,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.605,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_05_22",
+      "x": 5,
+      "y": 22,
+      "display_probability": 0.53,
+      "evidence_score": 0.526,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.526,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_07_22",
+      "x": 7,
+      "y": 22,
+      "display_probability": 0.82,
+      "evidence_score": 0.822,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.822,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_09_22",
+      "x": 9,
+      "y": 22,
+      "display_probability": 0.73,
+      "evidence_score": 0.726,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.726,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_10_22",
+      "x": 10,
+      "y": 22,
+      "display_probability": 0.64,
+      "evidence_score": 0.643,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.643,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_03_23",
+      "x": 3,
+      "y": 23,
+      "display_probability": 0.65,
+      "evidence_score": 0.654,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.654,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_04_23",
+      "x": 4,
+      "y": 23,
+      "display_probability": 0.84,
+      "evidence_score": 0.838,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.838,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_05_23",
+      "x": 5,
+      "y": 23,
+      "display_probability": 0.69,
+      "evidence_score": 0.689,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.689,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_06_23",
+      "x": 6,
+      "y": 23,
+      "display_probability": 0.61,
+      "evidence_score": 0.608,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.608,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_07_23",
+      "x": 7,
+      "y": 23,
+      "display_probability": 0.82,
+      "evidence_score": 0.825,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.825,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_08_23",
+      "x": 8,
+      "y": 23,
+      "display_probability": 0.83,
+      "evidence_score": 0.826,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.826,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_09_23",
+      "x": 9,
+      "y": 23,
+      "display_probability": 0.82,
+      "evidence_score": 0.818,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.818,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_10_23",
+      "x": 10,
+      "y": 23,
+      "display_probability": 0.82,
+      "evidence_score": 0.821,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.821,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    },
+    {
+      "id": "m_11_23",
+      "x": 11,
+      "y": 23,
+      "display_probability": 0.62,
+      "evidence_score": 0.615,
+      "source_scores": [
+        {
+          "role": "aot",
+          "score": 0.615,
+          "threshold": 0.52,
+          "passed": true
+        }
+      ],
+      "decision": "removed_by_aerosol_type_gate",
+      "reasons": [
+        "passed rendered AOT candidate threshold",
+        "not present in the stricter AOT + Aerosol Type intersection"
+      ]
+    }
+  ],
+  "evidence": {
+    "main": [
+      "Each active medium-scale red pixel now has a per-pixel evidence record.",
+      "The table records AOT support, Aerosol Type support and plume-shape filtering decisions."
+    ],
+    "supporting": [
+      "This makes the screenshot mask auditable at pixel-cell level instead of only as a visual overlay.",
+      "Removed candidate pixels remain visible as precision audit records."
+    ],
+    "conflicting": [
+      "Scores are derived from rendered GIBS products, not raw science arrays.",
+      "The table is not a VIIRS semantic segmentation model output."
+    ],
+    "precursor": [
+      "Wind/humidity context remains a separate NASA POWER point-sampled evidence record."
+    ]
+  },
+  "display_policy": "Use this table to explain why each red display pixel was kept. Do not promote it to real model inference.",
+  "aoi": {
+    "bbox": [
+      94,
+      37.4,
+      104.5,
+      42.5
+    ],
+    "crs": "EPSG:4326"
+  },
+  "mask_schema_path": "src/dust/dust_mask_schema.json",
+  "source_request": {
+    "type": "gibs",
+    "layer": "VIIRS_NOAA20_CorrectedReflectance_TrueColor",
+    "date": "2021-03-15",
+    "bbox": [
+      94,
+      37.4,
+      104.5,
+      42.5
+    ],
+    "width": 1200,
+    "height": 670,
+    "format": "image/jpeg",
+    "transparent": "false"
+  }
+}

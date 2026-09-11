@@ -1,0 +1,110 @@
+{
+  "round": "dust-round-037",
+  "tool_id": "hexi_confounder_evidence_matrix",
+  "event_id": "hexi-corridor-2021-03-15",
+  "goal_id": "1号目标",
+  "status": "evidence_matrix_ready",
+  "current_aoi_inference": "not_model_inference",
+  "actual_model_runs": [],
+  "summary": {
+    "dust_interpretation": "support_only_until_sensor_specific_model_runs",
+    "confidence_cap": "unknown",
+    "gate_decision": "do_not_promote_red_masks_to_model_output",
+    "reason": "Smoke, active-fire and burned-area models are registered but not executed for the current AOI/time. The Sentinel-2 scene is now same-day SCL-screened support, but it is not a dust segmentation model run."
+  },
+  "checks": [
+    {
+      "id": "smoke_plume_check",
+      "label": "Smoke plume check",
+      "tool_id": "smoke_plume_confounder_adapter",
+      "source_url": "https://github.com/HSG-AIML/IndustrialSmokePlumeDetection",
+      "role": "confounder_rejection",
+      "status": "research_reference_not_executed",
+      "result": "unknown",
+      "conflict_flag": "unknown",
+      "evidence_type": "conflicting",
+      "scale": "high",
+      "sensor": "Sentinel-2",
+      "reasoning": "Industrial smoke segmentation was not run on the selected Sentinel-2 scene; no non-smoke claim is made.",
+      "display_policy": "Show as unknown conflict check. Never convert a smoke mask into a dust mask."
+    },
+    {
+      "id": "active_fire_check",
+      "label": "Active fire / hot source check",
+      "tool_id": "active_fire_confounder_adapter",
+      "source_url": "https://github.com/Minoro/transfer-learning-landsat8-sentinel2",
+      "role": "confounder_rejection",
+      "status": "research_reference_not_executed",
+      "result": "unknown",
+      "conflict_flag": "unknown",
+      "evidence_type": "conflicting",
+      "scale": "high",
+      "sensor": "Sentinel-2 SWIR/NIR target slot",
+      "reasoning": "No active-fire model or FIRMS-style source check has been run for the current AOI/time.",
+      "display_policy": "If this later becomes positive, weaken dust interpretation and require smoke/fire source analysis."
+    },
+    {
+      "id": "burned_area_check",
+      "label": "Burned-area / burn-scar check",
+      "tool_id": "burned_area_temporal_adapter",
+      "source_url": "https://github.com/mnpinto/banet",
+      "role": "confounder_rejection",
+      "status": "research_reference_not_executed",
+      "result": "unknown",
+      "conflict_flag": "unknown",
+      "evidence_type": "conflicting",
+      "scale": "high",
+      "sensor": "VIIRS / Sentinel-2 burned-area target slot",
+      "reasoning": "BA-Net/FLOGA-style burned-area dating was not run; burned-scar confusion remains unresolved.",
+      "display_policy": "Use only as burned-area conflict evidence, not as a dust detector."
+    },
+    {
+      "id": "cloud_desert_background_check",
+      "label": "Cloud / desert-background confusion",
+      "tool_id": "sensor_model_promotion_gate",
+      "source_url": "local://src/dust/examples/dust_sensor_model_gate.json",
+      "role": "confounder_rejection",
+      "status": "gate_recorded_not_resolved",
+      "result": "partly_reduced_by_scl",
+      "conflict_flag": "possible",
+      "evidence_type": "conflicting",
+      "scale": "coarse|medium|high",
+      "sensor": "AIRS / VIIRS / Sentinel-2",
+      "reasoning": "Rendered-product masks can still be affected by clouds and bright desert background. The high-resolution Sentinel-2 support layer now uses SCL screening, but this does not replace a dust segmentation model.",
+      "display_policy": "Keep model promotion blocked until same-sensor dust inference plus cloud/background checks are recorded."
+    },
+    {
+      "id": "sentinel2_same_day_support_check",
+      "label": "Same-day Sentinel-2 support check",
+      "tool_id": "sentinel2_raw_aot_cog_audit_adapter",
+      "source_url": "local://src/dust/examples/sentinel2_aot_raw_audit.json",
+      "role": "evidence_support",
+      "status": "executed_scl_screened_cog_sampling",
+      "result": "same_day_support_only",
+      "conflict_flag": "false_for_temporal_alignment_true_for_model_promotion",
+      "evidence_type": "supporting",
+      "scale": "high",
+      "sensor": "Sentinel-2 L2A AOT + B04/B08 + SCL",
+      "reasoning": "The selected Sentinel-2 COG scene is S2A_46SEJ_20210315_2_L2A on 2021-03-15, matching the event day. Round 037 samples AOT, B04, B08 and SCL on a 160x160 grid, rejects cloud/cloud-shadow/water/snow/invalid SCL classes, and keeps 360 support cells. It remains support-only because no Sentinel-2 dust segmentation or confounder model was executed.",
+      "display_policy": "Render high-resolution red cells as SCL-screened AOT/B04/B08 support context, not as Sentinel-2 dust model output."
+    }
+  ],
+  "evidence": {
+    "main": [
+      "Confounder checks are explicit pass/fail/unknown records in the Dust Agent UI.",
+      "No smoke, fire or burned-area result is being used as a dust mask."
+    ],
+    "supporting": [
+      "The high-resolution Sentinel-2 selector uses a same-day STAC COG scene for source-region context.",
+      "The same-day SCL-screened AOT/B04/B08 support cells improve temporal alignment and cloud/background rejection, but remain not model inference."
+    ],
+    "conflicting": [
+      "Smoke, active fire and burned-area adapters are research_reference_not_executed for the current AOI/time.",
+      "Cloud/desert-background confusion remains unresolved for the medium rendered products and only partly reduced at high resolution by Sentinel-2 SCL."
+    ],
+    "precursor": [
+      "Next round should replace unknown checks with at least one real confounder data pull or model run before raising confidence."
+    ]
+  },
+  "display_policy": "Use this matrix to show agent reasoning and fail-closed model-promotion logic. Unknown conflict checks must not be interpreted as evidence supporting dust."
+}

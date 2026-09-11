@@ -1,0 +1,72 @@
+{
+  "round": "dust-round-040",
+  "tool_id": "viirs_deep_blue_raw_granule_access_audit",
+  "status": "raw_science_granule_downloaded",
+  "event_id": "hexi-corridor-2021-03-15",
+  "aoi": {
+    "bbox": [
+      94,
+      37.4,
+      104.5,
+      42.5
+    ],
+    "crs": "EPSG:4326"
+  },
+  "cmr_queries": {
+    "l2_url": "https://cmr.earthdata.nasa.gov/search/granules.json?concept_id=C2600305692-LAADS&temporal=2021-03-15T00:00:00Z,2021-03-16T00:00:00Z&bounding_box=94,37.4,104.5,42.5&page_size=10",
+    "d3_url": "https://cmr.earthdata.nasa.gov/search/granules.json?concept_id=C2600305784-LAADS&temporal=2021-03-15T00:00:00Z,2021-03-16T00:00:00Z&page_size=10"
+  },
+  "discovered_granules": {
+    "l2_count": 2,
+    "d3_count": 3,
+    "selected_l2": {
+      "producer_granule_id": "AERDB_L2_VIIRS_NOAA20.A2021074.0536.002.2023081012548.nc",
+      "time_start": "2021-03-15T05:36:00.000Z",
+      "time_end": "2021-03-15T05:42:00.000Z",
+      "day_night_flag": "DAY",
+      "granule_size_mb": "10.0042371749878",
+      "polygon": [
+        "26.402617 97.43412 31.011856 128.019409 51.891304 126.924179 45.736286 85.977875 26.402617 97.43412"
+      ],
+      "data_url": "https://data.laadsdaac.earthdatacloud.nasa.gov/prod-lads/AERDB_L2_VIIRS_NOAA20/AERDB_L2_VIIRS_NOAA20.A2021074.0536.002.2023081012548.nc",
+      "s3_url": "s3://prod-lads/AERDB_L2_VIIRS_NOAA20/AERDB_L2_VIIRS_NOAA20.A2021074.0536.002.2023081012548.nc",
+      "opendap_url": "https://ladsweb.modaps.eosdis.nasa.gov/opendap/RemoteResources/laads/allData/5200/AERDB_L2_VIIRS_NOAA20/2021/074/AERDB_L2_VIIRS_NOAA20.A2021074.0536.002.2023081012548.nc.html"
+    },
+    "selected_d3": {
+      "producer_granule_id": "AERDB_D3_VIIRS_NOAA20.A2021074.002.2023083215857.nc",
+      "time_start": "2021-03-15T00:00:00.000Z",
+      "time_end": "2021-03-16T00:00:00.000Z",
+      "day_night_flag": "UNSPECIFIED",
+      "granule_size_mb": "3.96198272705078",
+      "polygon": null,
+      "data_url": "https://data.laadsdaac.earthdatacloud.nasa.gov/prod-lads/AERDB_D3_VIIRS_NOAA20/AERDB_D3_VIIRS_NOAA20.A2021074.002.2023083215857.nc",
+      "s3_url": "s3://prod-lads/AERDB_D3_VIIRS_NOAA20/AERDB_D3_VIIRS_NOAA20.A2021074.002.2023083215857.nc",
+      "opendap_url": "https://ladsweb.modaps.eosdis.nasa.gov/opendap/RemoteResources/laads/allData/5200/AERDB_D3_VIIRS_NOAA20/2021/074/AERDB_D3_VIIRS_NOAA20.A2021074.002.2023083215857.nc.html"
+    }
+  },
+  "direct_download_checks": [
+    {
+      "producer_granule_id": "AERDB_L2_VIIRS_NOAA20.A2021074.0536.002.2023081012548.nc",
+      "data_url": "https://data.laadsdaac.earthdatacloud.nasa.gov/prod-lads/AERDB_L2_VIIRS_NOAA20/AERDB_L2_VIIRS_NOAA20.A2021074.0536.002.2023081012548.nc",
+      "local_path": "src/dust/examples/raw-data/dust-round-040/AERDB_L2_VIIRS_NOAA20.A2021074.0536.002.2023081012548.nc",
+      "http_status": 200,
+      "bytes": 10490203,
+      "first_bytes_hex": "89 48 44 46 0d 0a 1a 0a",
+      "file_signature": "netcdf"
+    },
+    {
+      "producer_granule_id": "AERDB_D3_VIIRS_NOAA20.A2021074.002.2023083215857.nc",
+      "data_url": "https://data.laadsdaac.earthdatacloud.nasa.gov/prod-lads/AERDB_D3_VIIRS_NOAA20/AERDB_D3_VIIRS_NOAA20.A2021074.002.2023083215857.nc",
+      "local_path": "src/dust/examples/raw-data/dust-round-040/AERDB_D3_VIIRS_NOAA20.A2021074.002.2023083215857.nc",
+      "http_status": 200,
+      "bytes": 4154440,
+      "first_bytes_hex": "89 48 44 46 0d 0a 1a 0a",
+      "file_signature": "netcdf"
+    }
+  ],
+  "local_raw_science_values_available": true,
+  "local_invalid_downloads": [],
+  "ui_policy": "Show this as a real NASA CMR/LAADS raw-data access attempt. Do not treat Earthdata Login HTML downloads as NetCDF science values and do not replace the current red mask with them.",
+  "auth_mode": "earthdata_bearer_token",
+  "next_action": "Parse downloaded AERDB_L2/D3 variables for raw AOT/Aerosol Type support."
+}

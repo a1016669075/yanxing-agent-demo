@@ -1,0 +1,55 @@
+{
+  "round": "dust-round-032",
+  "tool_id": "modis_3dcnn_dust_adapter",
+  "status": "imported_precomputed_model_output_artifact",
+  "current_aoi_inference": "not_current_aoi",
+  "actual_model_runs": [],
+  "model_name": "Rivas-AI dust-3dcnn",
+  "source_url": "https://github.com/Rivas-AI/dust-3dcnn",
+  "cloned_repo_path": "reports/dust-round-031/model-run/dust-3dcnn",
+  "checkpoint_path": "reports/dust-round-031/model-run/dust-3dcnn/3DCNN/big_epoch_3_finished.pth",
+  "selected_case": "T2025086.0420",
+  "source_prediction_image": "reports/dust-round-031/model-run/dust-3dcnn/Rivas_Data/Test_Dataset_Results/T2025086.0420.png",
+  "outputs": {
+    "prediction_panel": "src/dust/examples/model-outputs/dust-round-031/rivas_3dcnn_T2025086_0420_prediction_panel.png",
+    "red_prediction_mask": "src/dust/examples/model-outputs/dust-round-031/rivas_3dcnn_T2025086_0420_red_prediction_mask.png",
+    "red_prediction_overlay": "src/dust/examples/model-outputs/dust-round-031/rivas_3dcnn_T2025086_0420_red_prediction_overlay.png"
+  },
+  "mask": {
+    "type": "png",
+    "path": "src/dust/examples/model-outputs/dust-round-031/rivas_3dcnn_T2025086_0420_red_prediction_mask.png",
+    "pixel_class": "dust_probability_reference_threshold",
+    "threshold": 178,
+    "active_pixels": 9905,
+    "opacity": 0.46,
+    "color": "#ff0000",
+    "crop": {
+      "x": 0,
+      "y": 22,
+      "width": 298,
+      "height": 448
+    }
+  },
+  "metrics": {
+    "selected_case_accuracy": 0.82,
+    "selected_case_samples": 2735100,
+    "overall_accuracy": 0.954
+  },
+  "round_032_execution_attempt": {
+    "attempt_time": "2026-05-18T17:35:00+08:00",
+    "command": "python reports\\dust-round-031\\model-run\\dust-3dcnn\\Rivas_Data\\test-dataset-summary.py",
+    "status": "blocked_runtime_and_input_missing",
+    "stderr": "ModuleNotFoundError: No module named 'torch'",
+    "processed_input_dir": "reports/dust-round-031/model-run/dust-3dcnn/Test_Dataset_Processed",
+    "processed_input_present": false,
+    "box_credentials_present": false,
+    "can_run_current_aoi_now": false,
+    "blockers": [
+      "PyTorch is not installed in the active Python 3.12.10 environment.",
+      "The repository clone does not include processed MODIS .npy input folders.",
+      "The Box downloader has blank client_id/client_secret/developer_token placeholders and no BOX_* environment credentials are present.",
+      "Current Hexi AOI GIBS RGB/AOT images are not the 38-band MODIS .npy input expected by the Rivas model."
+    ]
+  },
+  "display_policy": "This is a real precomputed MODIS 3D-CNN model-output artifact imported from the cloned repository. Round 032 attempted local execution, but runtime and processed MODIS inputs are missing. It is not current Hexi AOI inference and must not replace the current VIIRS red mask."
+}

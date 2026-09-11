@@ -1,0 +1,856 @@
+{
+  "version": "dust-round-044",
+  "generated_at": "2026-05-22T00:00:00+08:00",
+  "clone_status_note": "Round 044 keeps the executed current-AOI multichannel VIIRS weak-label segmentation head and adds a runnable multi-agent coalition mask adapter. The coalition layer colors each final dust pixel by the dominant contributing agent/model; it is an arbitration display over executed outputs, not Dust-Mamba or Element84 public weights.",
+  "tools": [
+    {
+      "id": "hexi_corridor_case_aoi",
+      "name": "Hexi Corridor Dust Case AOI",
+      "source_url": "local://src/dust/examples/hexi_corridor_case.json",
+      "satellite_or_sensor": "AIRS / VIIRS / Sentinel-2 / NASA POWER",
+      "spatial_resolution_or_scale": "coarse|medium|high AOI binding",
+      "input_type": "case bbox, event date, scale plan and data-source policy",
+      "output_type": "case AOI metadata for dust agent UI and evidence chain",
+      "primary_role": "evidence_support",
+      "status": "data_ready",
+      "can_produce_pixel_mask": false,
+      "expected_output_schema": "src/dust/examples/hexi_corridor_case.json",
+      "limitations": [
+        "This is AOI/event metadata, not a model or dust mask.",
+        "All red masks still require their own sensor-specific provenance and promotion gate checks."
+      ],
+      "display_policy": "Use as the active case binding for the multi-scale dust-agent screenshot path."
+    },
+    {
+      "id": "dust_mamba_repo_audit_adapter",
+      "name": "Dust-Mamba Repository and Checkpoint Audit Adapter",
+      "source_url": "local://src/dust/tools/auditDustMambaRepo.mjs",
+      "satellite_or_sensor": "FY-4A AGRI multi-channel + MERRA-2 / ERA5",
+      "spatial_resolution_or_scale": "4 km, 15 min",
+      "input_type": "Dust-Mamba GitHub repo, LSDSSIMR GitHub repo, README checkpoint/data links, local file scan",
+      "output_type": "repository clone status, checkpoint availability, LSDSSIMR HDF5 input contract, promotion decision",
+      "primary_role": "evidence_support",
+      "status": "runnable",
+      "can_produce_pixel_mask": false,
+      "expected_output_schema": "src/dust/examples/dust_mamba_repo_audit.json",
+      "limitations": [
+        "This adapter audits repository readiness; it does not infer dust pixels.",
+        "Round 025 found checkpoint links but no local checkpoint files.",
+        "LSDSSIMR HDF5 data is not downloaded locally."
+      ],
+      "display_policy": "Show as the P0 Dust-Mamba readiness audit. Use it to explain why current red masks are not Dust-Mamba outputs."
+    },
+    {
+      "id": "gibs_rendered_dust_score_threshold_adapter",
+      "name": "GIBS Rendered Dust-Score Threshold Adapter",
+      "source_url": "https://gibs.earthdata.nasa.gov/",
+      "satellite_or_sensor": "AIRS Aqua Dust Score Day",
+      "spatial_resolution_or_scale": "coarse rendered product grid",
+      "input_type": "NASA GIBS rendered PNG for AIRS_L2_Dust_Score_Day",
+      "output_type": "pixel mask cells, threshold metadata, sampled confidence summary",
+      "primary_role": "evidence_support",
+      "status": "runnable",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/dust_mask_schema.json",
+      "limitations": [
+        "This thresholds rendered GIBS product colors, not raw scientific values.",
+        "It is a data-derived display mask, not Dust-Mamba or other model inference.",
+        "Use only as first coarse-scale evidence until raw product access is connected."
+      ],
+      "display_policy": "Show as executed rendered-product threshold when the AIRS GIBS image is sampled successfully; label as real data-derived but not model inference."
+    },
+    {
+      "id": "gibs_rendered_deep_blue_threshold_adapter",
+      "name": "GIBS Rendered Deep Blue AOT Threshold Adapter",
+      "source_url": "https://gibs.earthdata.nasa.gov/",
+      "satellite_or_sensor": "VIIRS NOAA-20 Deep Blue AOT",
+      "spatial_resolution_or_scale": "medium rendered aerosol support grid",
+      "input_type": "NASA GIBS rendered PNG for VIIRS_NOAA20_AOT_Deep_Blue_Best_Estimate",
+      "output_type": "pixel mask cells, threshold metadata, sampled confidence summary",
+      "primary_role": "evidence_support",
+      "status": "runnable",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/dust_mask_schema.json",
+      "limitations": [
+        "This thresholds rendered GIBS product colors, not raw AOT scientific values.",
+        "It is supportive aerosol evidence and must not be treated as a VIIRS dust segmentation model.",
+        "Use it to improve the medium-scale screenshot path until a sensor-specific dust model is executable."
+      ],
+      "display_policy": "Show as executed medium-scale support mask when the VIIRS Deep Blue AOT GIBS image is sampled successfully; label as data-derived support, not model inference."
+    },
+    {
+      "id": "gibs_rendered_aot_aerosol_type_intersection_adapter",
+      "name": "GIBS Rendered AOT + Aerosol Type Intersection Adapter",
+      "source_url": "https://gibs.earthdata.nasa.gov/",
+      "satellite_or_sensor": "VIIRS NOAA-20 Deep Blue AOT + Aerosol Type",
+      "spatial_resolution_or_scale": "medium rendered aerosol support grid",
+      "input_type": "NASA GIBS rendered PNGs for VIIRS_NOAA20_AOT_Deep_Blue_Best_Estimate and VIIRS_NOAA20_Aerosol_Type_Deep_Blue_Best_Estimate",
+      "output_type": "intersection pixel mask cells, threshold metadata, sampled confidence summary",
+      "primary_role": "evidence_support",
+      "status": "runnable",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/dust_mask_schema.json",
+      "limitations": [
+        "This intersects rendered GIBS product colors, not raw AOT or raw aerosol-type scientific values.",
+        "It is a stricter supportive aerosol mask and must not be treated as a VIIRS dust segmentation model.",
+        "Use it to reduce single-product false positives until a sensor-specific dust model is executable."
+      ],
+      "display_policy": "Show as executed medium-scale intersection support mask; label as stricter data-derived support, not model inference."
+    },
+    {
+      "id": "viirs_deep_blue_raw_granule_access_audit",
+      "name": "VIIRS Deep Blue Raw Granule Access Audit",
+      "source_url": "https://cmr.earthdata.nasa.gov/search/granules.json",
+      "satellite_or_sensor": "VIIRS NOAA-20 Deep Blue AERDB_L2 / AERDB_D3",
+      "spatial_resolution_or_scale": "L2 6 km swath; D3 1 degree daily grid",
+      "input_type": "NASA CMR metadata query plus LAADS Earthdata Cloud data URL check",
+      "output_type": "selected raw granule metadata and direct NetCDF download status",
+      "primary_role": "evidence_support",
+      "status": "runnable",
+      "can_produce_pixel_mask": false,
+      "expected_output_schema": "src/dust/examples/viirs_deep_blue_raw_granule_audit.json",
+      "limitations": [
+        "Requires an Earthdata/LAADS Bearer token supplied through EARTHDATA_TOKEN.",
+        "This audit downloads granules and verifies file signatures; mask generation is handled by viirs_deep_blue_raw_science_mask_adapter.",
+        "Do not write or display the token in UI/report outputs."
+      ],
+      "display_policy": "Show as executed raw-data access when NetCDF files are downloaded; do not show secrets."
+    },
+    {
+      "id": "viirs_deep_blue_raw_science_mask_adapter",
+      "name": "VIIRS Deep Blue Raw Science-Value Mask Adapter",
+      "source_url": "local://src/dust/tools/exportViirsDeepBlueRawMask.mjs",
+      "satellite_or_sensor": "VIIRS NOAA-20 Deep Blue AERDB_L2 / AERDB_D3",
+      "spatial_resolution_or_scale": "L2 6 km swath rasterized to AOI display grid; D3 1 degree support",
+      "input_type": "Downloaded NetCDF4/HDF5 science variables: Latitude, Longitude, AOT550, Aerosol_Type_Land_Ocean, QA flag",
+      "output_type": "raw science-value dust-support mask cells, raw pixel counts, D3 support summary, provenance",
+      "primary_role": "evidence_support",
+      "status": "runnable",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/examples/viirs_deep_blue_raw_mask_output.json",
+      "limitations": [
+        "Threshold adapter, not learned semantic segmentation.",
+        "Aerosol Type 0 plus high AOT/QA supports dust interpretation but is not Dust-Mamba or Element84 inference.",
+        "Area is estimated from display grid cells, not native swath pixel footprints."
+      ],
+      "display_policy": "Show as real raw VIIRS science-value support mask. It may improve the medium-scale red overlay but must be labeled as raw data-derived support, not deep-model inference."
+    },
+    {
+      "id": "viirs_deep_blue_native_footprint_mask_adapter",
+      "name": "VIIRS Deep Blue Native L2 Footprint Mask Adapter",
+      "source_url": "local://src/dust/tools/exportViirsDeepBlueRawFootprints.mjs",
+      "satellite_or_sensor": "VIIRS NOAA-20 Deep Blue AERDB_L2",
+      "spatial_resolution_or_scale": "native L2 geolocated swath pixel footprints",
+      "input_type": "Downloaded NetCDF4/HDF5 science variables: Latitude, Longitude, AOT550, Aerosol_Type_Land_Ocean, QA flag",
+      "output_type": "GeoJSON polygon footprints, display SVG polygons, native pixel count, footprint area and provenance",
+      "primary_role": "evidence_support",
+      "status": "runnable",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/examples/viirs_deep_blue_raw_footprint_mask_output.json",
+      "limitations": [
+        "Threshold adapter, not learned semantic segmentation.",
+        "Footprint corners are estimated from adjacent L2 geolocation centers.",
+        "Aerosol Type 0 plus high AOT/QA supports dust interpretation but is not Dust-Mamba or Element84 inference."
+      ],
+      "display_policy": "Use as the current highest-precision medium-scale red overlay from real VIIRS L2 raw data; label as native raw-data footprint support, not deep-model inference."
+    },
+    {
+      "id": "viirs_element84_style_weak_label_model_adapter",
+      "name": "VIIRS Element84-Style Weak-Label Pixel Classifier Adapter",
+      "source_url": "local://src/dust/tools/trainViirsElement84StyleModel.mjs",
+      "satellite_or_sensor": "VIIRS NOAA-20 Corrected Reflectance + VIIRS Deep Blue L2 weak labels",
+      "spatial_resolution_or_scale": "medium 120x58 inference grid over Hexi Corridor AOI",
+      "input_type": "NASA GIBS VIIRS corrected reflectance RGB image plus VIIRS Deep Blue L2 native footprint weak labels",
+      "output_type": "probability_map.png, binary_mask.png, red overlay.png, pixel_classifier_weights.json and metadata JSON",
+      "primary_role": "main_dust_detection",
+      "status": "runnable",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/examples/viirs_element84_style_learned_output.json",
+      "limitations": [
+        "Current-AOI weak-label model, not Element84 public model weights.",
+        "Weak labels are rasterized from VIIRS Deep Blue L2 threshold footprints, not manually curated dust labels.",
+        "Model is trained on one Hexi event image and must be expanded before operational use.",
+        "Not Dust-Mamba FY-4A/LSDSSIMR inference."
+      ],
+      "display_policy": "Show as executed learned current-AOI VIIRS pixel mask. Label as weak-label inference and keep Element84/Dust-Mamba public-weight claims out of the UI."
+    },
+    {
+      "id": "viirs_multichannel_weak_label_segmentation_adapter",
+      "name": "VIIRS Multichannel Weak-Label Segmentation Adapter",
+      "source_url": "local://src/dust/tools/trainViirsMultichannelSegmentationModel.mjs",
+      "satellite_or_sensor": "VIIRS NOAA-20 Corrected Reflectance + Deep Blue AOT + Aerosol Type + L2 weak labels",
+      "spatial_resolution_or_scale": "medium 120x58 inference grid over Hexi Corridor AOI",
+      "input_type": "NASA GIBS VIIRS corrected reflectance RGB image, VIIRS Deep Blue AOT rendered product, Aerosol Type rendered product and VIIRS Deep Blue L2 native footprint weak labels",
+      "output_type": "probability_map.png, binary_mask.png, red overlay.png, multichannel segmentation weights JSON and metadata JSON",
+      "primary_role": "main_dust_detection",
+      "status": "runnable",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/examples/viirs_multichannel_segmentation_output.json",
+      "limitations": [
+        "Current-AOI weak-label model, not Element84 public model weights.",
+        "Weak labels are rasterized from VIIRS Deep Blue L2 threshold footprints, not manually curated dust labels.",
+        "AOT and Aerosol Type are model inputs, so validation is not independent dust validation.",
+        "Validation is a same-AOI spatial holdout and must not be reported as operational generalization.",
+        "Not Dust-Mamba FY-4A/LSDSSIMR inference."
+      ],
+      "display_policy": "Show as the active executed current-AOI VIIRS learned mask for this round. Label as multichannel weak-label inference and keep Element84/Dust-Mamba public-weight claims out of the UI."
+    },
+    {
+      "id": "multi_agent_coalition_mask_adapter",
+      "name": "Multi-Agent Coalition Mask Adapter",
+      "source_url": "local://src/dust/dustAgentPage.mjs#buildMultiAgentCoalitionOutput",
+      "satellite_or_sensor": "VIIRS NOAA-20 Corrected Reflectance + Deep Blue AOT + Aerosol Type + VIIRS L2 footprints",
+      "spatial_resolution_or_scale": "medium 120x58 arbitration grid over Hexi Corridor AOI",
+      "input_type": "VIIRS multichannel learned mask, native L2 footprint mask, raw L2 science support, rendered AOT/Aerosol Type support and RGB weak-label learned baseline",
+      "output_type": "color-coded pixel mask where each active cell records dominant_agent, contribution_mode and coalition_votes",
+      "primary_role": "main_dust_detection",
+      "status": "runnable",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/dust_mask_schema.json plus cell-level dominant_agent fields",
+      "limitations": [
+        "This is an arbitration/display adapter over already executed outputs, not a newly trained neural network.",
+        "The multichannel VIIRS model remains the active cell proposer.",
+        "Dominance colors explain contribution source and must not be treated as separate dust intensity classes.",
+        "Not Dust-Mamba FY-4A/LSDSSIMR inference and not Element84 public weights."
+      ],
+      "display_policy": "Use as the default PPT-ready final mask. Show pixel colors as multi-agent contribution: learned model-led red, raw L2 footprint orange, aerosol support yellow and RGB weak-label baseline purple."
+    },
+    {
+      "id": "gibs_rendered_aot_removed_candidate_view",
+      "name": "GIBS Rendered AOT Removed-Candidate View",
+      "source_url": "https://gibs.earthdata.nasa.gov/",
+      "satellite_or_sensor": "VIIRS NOAA-20 Deep Blue AOT + Aerosol Type",
+      "spatial_resolution_or_scale": "medium rendered aerosol support grid",
+      "input_type": "AOT-only candidate cells and AOT + Aerosol Type intersection cells",
+      "output_type": "removed candidate pixel mask cells and comparison metadata",
+      "primary_role": "evidence_support",
+      "status": "runnable",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/dust_mask_schema.json",
+      "limitations": [
+        "This is a comparison view, not an active dust anomaly mask.",
+        "It shows pixels rejected by the stricter rendered-product intersection.",
+        "It is not raw scientific values and not model inference."
+      ],
+      "display_policy": "Show only as precision-audit layer; never label removed pixels as confirmed dust anomalies."
+    },
+    {
+      "id": "gibs_rendered_plume_shape_filter_adapter",
+      "name": "GIBS Rendered Plume-Shape Filter Adapter",
+      "source_url": "https://gibs.earthdata.nasa.gov/",
+      "satellite_or_sensor": "VIIRS NOAA-20 Deep Blue AOT + Aerosol Type",
+      "spatial_resolution_or_scale": "medium rendered aerosol support grid",
+      "input_type": "AOT + Aerosol Type intersection cells",
+      "output_type": "shape-filtered active anomaly pixel mask cells and component metadata",
+      "primary_role": "evidence_support",
+      "status": "runnable",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/dust_mask_schema.json",
+      "limitations": [
+        "This is a connected-component postprocess on rendered-product support pixels.",
+        "It is not a trained VIIRS dust segmentation model.",
+        "It is not raw AOT or aerosol-type scientific values."
+      ],
+      "display_policy": "Use as the default medium-scale precision postprocess after AOT + Aerosol Type support; label as shape-filtered rendered-product evidence, not model inference."
+    },
+    {
+      "id": "hexi_medium_pixel_mask_export_adapter",
+      "name": "Hexi Medium Pixel Mask GeoJSON Export Adapter",
+      "source_url": "local://src/dust/tools/exportHexiPixelMask.mjs",
+      "satellite_or_sensor": "VIIRS NOAA-20 corrected reflectance + Deep Blue support products",
+      "spatial_resolution_or_scale": "medium display grid over Hexi Corridor AOI",
+      "input_type": "active medium-scale display grid cells from /dust page debug state",
+      "output_type": "GeoJSON polygon features and pixel precision audit JSON",
+      "primary_role": "evidence_support",
+      "status": "runnable",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/examples/hexi_pixel_precision_audit.json",
+      "limitations": [
+        "Exports the current display/audit grid, not native VIIRS raw pixels.",
+        "The source mask is rendered-product support evidence and not model inference.",
+        "Requires the local /dust page to be served before running the export tool."
+      ],
+      "display_policy": "Show as executed pixel-level traceability evidence for screenshots. Do not promote the exported GeoJSON to a real model output."
+    },
+    {
+      "id": "hexi_medium_pixel_evidence_table_adapter",
+      "name": "Hexi Medium Pixel Evidence Table Adapter",
+      "source_url": "local://src/dust/tools/exportHexiMediumPixelEvidence.mjs",
+      "satellite_or_sensor": "VIIRS NOAA-20 corrected reflectance + Deep Blue support products",
+      "spatial_resolution_or_scale": "medium display grid over Hexi Corridor AOI",
+      "input_type": "current medium-scale active, candidate and rejected display cells from /dust page debug state",
+      "output_type": "per-pixel keep/reject evidence records with source scores, thresholds and decision reasons",
+      "primary_role": "evidence_support",
+      "status": "runnable",
+      "can_produce_pixel_mask": false,
+      "expected_output_schema": "src/dust/examples/hexi_medium_pixel_evidence.json",
+      "limitations": [
+        "Records evidence for display cells, not native VIIRS sensor pixels.",
+        "Source scores come from rendered GIBS product color sampling, not raw science arrays.",
+        "This is a precision audit table and must not be promoted to model inference."
+      ],
+      "display_policy": "Show next to the red medium-scale mask to explain why each active pixel was kept and why candidates were rejected."
+    },
+    {
+      "id": "hexi_multiscale_pixel_lock_audit_adapter",
+      "name": "Hexi Multi-Scale Pixel-Lock Audit Adapter",
+      "source_url": "local://src/dust/tools/exportHexiMultiscalePixelLock.mjs",
+      "satellite_or_sensor": "AIRS / VIIRS / Sentinel-2",
+      "spatial_resolution_or_scale": "coarse|medium|high display grids over Hexi Corridor AOI",
+      "input_type": "current /dust debug outputs for all scale display masks",
+      "output_type": "multi-scale GeoJSON feature collection and pixel-lock audit JSON",
+      "primary_role": "evidence_support",
+      "status": "runnable",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/examples/hexi_multiscale_pixel_lock_audit.json",
+      "limitations": [
+        "Exports display/audit grids, not native sensor rasters.",
+        "Coarse and high cells are support/display masks; medium cells may be current-AOI VIIRS weak-label inference when the learned adapter output is active.",
+        "High-resolution cells now come from same-day Sentinel-2 SCL-screened AOT + B04/B08 low-NDVI source support sampling, with supporting-only policy.",
+        "Requires the local /dust page to be served before running the export tool."
+      ],
+      "display_policy": "Show as executed multi-scale pixel-lock audit. Use it to explain coarse discovery -> medium learned localization -> high interpretation while preserving per-scale provenance."
+    },
+    {
+      "id": "hexi_scale_transition_trace_adapter",
+      "name": "Hexi Scale Transition Trace Adapter",
+      "source_url": "local://src/dust/tools/exportHexiScaleTransitionTrace.mjs",
+      "satellite_or_sensor": "AIRS / VIIRS / Sentinel-2",
+      "spatial_resolution_or_scale": "coarse-to-medium-to-high display trace",
+      "input_type": "coarse output, medium pixel evidence table, high-resolution scene selection, multiscale pixel-lock audit",
+      "output_type": "scale transition trace with retained signal, precision gain, limitations and model-promotion status",
+      "primary_role": "evidence_support",
+      "status": "runnable",
+      "can_produce_pixel_mask": false,
+      "expected_output_schema": "src/dust/examples/hexi_scale_transition_trace.json",
+      "limitations": [
+        "This trace links display/support masks; it does not infer new dust pixels.",
+        "It preserves each sensor scale's limitations and model-promotion blockers.",
+        "High-resolution step remains supporting-only because no Sentinel-2 dust segmentation model ran."
+      ],
+      "display_policy": "Show as the user-facing proof that the agent moves from coarse discovery to medium localization to high-resolution interpretation without mixing model outputs across sensors."
+    },
+    {
+      "id": "hexi_multiscale_png_mask_asset_adapter",
+      "name": "Hexi Multi-Scale PNG Mask Asset Adapter",
+      "source_url": "local://src/dust/tools/exportHexiMaskAssets.mjs",
+      "satellite_or_sensor": "AIRS / VIIRS / Sentinel-2",
+      "spatial_resolution_or_scale": "coarse|medium|high display mask PNG assets",
+      "input_type": "current /dust display grids and mask provenance",
+      "output_type": "transparent red PNG mask assets and manifest JSON",
+      "primary_role": "evidence_support",
+      "status": "runnable",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/examples/hexi_mask_asset_manifest.json",
+      "limitations": [
+        "Exports transparent display PNGs, not native sensor rasters.",
+        "PNG masks are screenshot/preview assets and not model inference.",
+        "High-resolution PNG uses same-day Sentinel-2 SCL-screened AOT + B04/B08 source-support cells and remains supporting-only because no Sentinel-2 dust model ran.",
+        "Requires the local /dust page to be served before running the export tool."
+      ],
+      "display_policy": "Show as mask output asset export for PPT-quality pixel overlays. Do not present PNG assets as Dust-Mamba, VIIRS, MODIS or Sentinel-2 model inference."
+    },
+    {
+      "id": "hexi_multiscale_composite_overlay_adapter",
+      "name": "Hexi Multi-Scale Composite Overlay Adapter",
+      "source_url": "local://src/dust/tools/exportHexiCompositeOverlays.mjs",
+      "satellite_or_sensor": "AIRS / VIIRS / Sentinel-2",
+      "spatial_resolution_or_scale": "coarse|medium|high basemap + red display mask composite",
+      "input_type": "current /dust map frame for each scale",
+      "output_type": "PPT-ready composite PNG overlays and manifest JSON",
+      "primary_role": "evidence_support",
+      "status": "runnable",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/examples/hexi_composite_overlay_manifest.json",
+      "limitations": [
+        "Exports screenshot composites, not native sensor rasters.",
+        "Composite overlays contain display/support masks and are not model inference.",
+        "High-resolution composite uses same-day Sentinel-2 SCL-screened AOT + B04/B08 source-support cells and remains supporting-only because no Sentinel-2 dust model ran.",
+        "Requires the local /dust page to be served before running the export tool."
+      ],
+      "display_policy": "Show as PPT-ready basemap + red pixel mask export. Do not present composite PNG assets as Dust-Mamba, VIIRS, MODIS or Sentinel-2 model inference."
+    },
+    {
+      "id": "sentinel2_raw_aot_cog_audit_adapter",
+      "name": "Sentinel-2 SCL-Screened Raw AOT + NDVI COG Audit Adapter",
+      "source_url": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/",
+      "satellite_or_sensor": "Sentinel-2 L2A AOT + B04 + B08 + SCL",
+      "spatial_resolution_or_scale": "high-resolution AOT/B04/B08/SCL COG sampled to 160x160 audit grid",
+      "input_type": "Sentinel-2 L2A AOT, red, NIR and SCL Cloud-Optimized GeoTIFFs",
+      "output_type": "SCL-screened AOT, NDVI and brightness statistics, percentile support cells, provenance metadata",
+      "primary_role": "evidence_support",
+      "status": "runnable",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/dust_mask_schema.json",
+      "limitations": [
+        "AOT and NDVI are aerosol/source-region support evidence, not dust/not-dust semantic segmentation.",
+        "SCL rejects cloud, cloud shadow, water, snow/ice and invalid classes before selecting support cells.",
+        "Current Sentinel-2 image is same-day but covers only the selected MGRS tile footprint near the western Hexi AOI edge.",
+        "Do not display SCL-screened AOT + source support cells as active dust anomaly model pixels."
+      ],
+      "display_policy": "Show as high-resolution raw-raster audit/support only; never label SCL-screened AOT + source support cells as dust mask or model inference."
+    },
+    {
+      "id": "sensor_model_promotion_gate",
+      "name": "Sensor-Model Promotion Gate",
+      "source_url": "local://src/dust/examples/dust_sensor_model_gate.json",
+      "satellite_or_sensor": "FY-4A / AIRS / VIIRS / MODIS / Sentinel-2",
+      "spatial_resolution_or_scale": "coarse|medium|high",
+      "input_type": "tool registry status, current mask provenance, sensor/model binding rules",
+      "output_type": "promotion decision for whether a support layer can be treated as real dust mask",
+      "primary_role": "evidence_support",
+      "status": "runnable",
+      "can_produce_pixel_mask": false,
+      "expected_output_schema": "src/dust/examples/dust_sensor_model_gate.json",
+      "limitations": [
+        "This gate does not infer dust pixels.",
+        "It prevents cross-sensor model mixing and false promotion of support masks.",
+        "All current red active masks remain support-only until a sensor-specific model run satisfies the gate."
+      ],
+      "display_policy": "Show as the promotion gate before interpreting any red overlay as real dust anomaly output."
+    },
+    {
+      "id": "dust_mask_contract_audit_adapter",
+      "name": "Dust Mask Contract Audit Adapter",
+      "source_url": "local://src/dust/tools/validateDustMaskPromotion.mjs",
+      "satellite_or_sensor": "AIRS / VIIRS / MODIS / Sentinel-2",
+      "spatial_resolution_or_scale": "coarse|medium|high",
+      "input_type": "multiscale example outputs plus sensor-model promotion gate",
+      "output_type": "display contract and model-promotion audit JSON",
+      "primary_role": "evidence_support",
+      "status": "runnable",
+      "can_produce_pixel_mask": false,
+      "expected_output_schema": "src/dust/examples/dust_model_contract_audit.json",
+      "limitations": [
+        "This audit does not infer dust pixels.",
+        "It only checks whether current masks may be displayed and whether any mask may be promoted to real model inference.",
+        "Current promotion count must remain zero until a sensor-specific model is actually executed."
+      ],
+      "display_policy": "Show next to the sensor-model gate so users can see which pixel masks pass display-only contract checks and which remain blocked from model promotion."
+    },
+    {
+      "id": "modis_3dcnn_input_contract_adapter",
+      "name": "MODIS 3D-CNN Input Contract Adapter",
+      "source_url": "local://src/dust/tools/auditModis3dcnnInputs.mjs",
+      "satellite_or_sensor": "MODIS Terra/Aqua multispectral",
+      "spatial_resolution_or_scale": "MODIS granule / patch inference",
+      "input_type": "local checkpoint plus processed .npy case folders",
+      "output_type": "checkpoint/input readiness audit and inference blocker summary",
+      "primary_role": "main_dust_detection",
+      "status": "blocked",
+      "can_produce_pixel_mask": false,
+      "expected_output_schema": "src/dust/examples/modis_3dcnn_input_contract.json",
+      "limitations": [
+        "This audit does not infer dust pixels.",
+        "The local checkpoint exists, but no complete processed .npy MODIS case folder is present.",
+        "The reference prediction PNG remains a model-readiness artifact, not current AOI evidence."
+      ],
+      "display_policy": "Show as the exact input-readiness gate for turning the MODIS 3D-CNN from model-ready reference into runnable current-AOI inference."
+    },
+    {
+      "id": "dust_mamba_adapter",
+      "name": "Dust-Mamba Adapter",
+      "source_url": "https://github.com/Zjut-MultimediaPlus/Dust-Mamba",
+      "satellite_or_sensor": "FY-4A AGRI multi-channel + MERRA-2 / ERA5",
+      "spatial_resolution_or_scale": "4 km, 15 min",
+      "input_type": "LSDSSIMR HDF5 multi-source tensor",
+      "output_type": "occurrence_mask, intensity_mask, probability_map, metadata",
+      "primary_role": "main_dust_detection",
+      "status": "blocked",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/dust_mask_schema.json",
+      "limitations": [
+        "Checkpoint is referenced through BaiduYun in the README but is not downloaded locally.",
+        "LSDSSIMR HDF5 data is not downloaded locally.",
+        "Round 025 repository audit keeps Dust-Mamba and LSDSSIMR code/input inspection active, but inference remains blocked.",
+        "Round 032 reached the BaiduYun/IEEE landing pages, but no checkpoint or HDF5 file is local."
+      ],
+      "display_policy": "Show as P0 main detector, but label current UI mask as data-derived support until checkpoint and LSDSSIMR inputs are local."
+    },
+    {
+      "id": "lsdssimr_data_card",
+      "name": "LSDSSIMR Data Card",
+      "source_url": "https://github.com/Zjut-MultimediaPlus/LSDSSIMR",
+      "satellite_or_sensor": "FY-4A AGRI + MERRA-2 / ERA5",
+      "spatial_resolution_or_scale": "4 km, 15 min, March-May 2020-2022",
+      "input_type": "HDF5 data archive",
+      "output_type": "data provenance and model input description",
+      "primary_role": "evidence_support",
+      "status": "research_reference",
+      "can_produce_pixel_mask": false,
+      "expected_output_schema": "data card only",
+      "limitations": [
+        "Nearly 10000 HDF5 files; data not downloaded in this round.",
+        "Requires BaiduYun or IEEE DataPort access."
+      ],
+      "display_policy": "Use as low-resolution high-frequency monitoring source explanation, not as executed inference."
+    },
+    {
+      "id": "viirs_sandstorm_segmentation_adapter",
+      "name": "VIIRS Sandstorm Segmentation Adapter",
+      "source_url": "https://element84.com/machine-learning/segmenting-sandstorms-in-satellite-imagery/",
+      "satellite_or_sensor": "VIIRS Corrected Reflectance",
+      "spatial_resolution_or_scale": "medium/coarse regional corrected reflectance",
+      "input_type": "VIIRS corrected reflectance RGB imagery",
+      "output_type": "dust probability map and binary dust mask",
+      "primary_role": "main_dust_detection",
+      "status": "research_reference",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/dust_mask_schema.json",
+      "limitations": [
+        "Public article describes semantic segmentation workflow, but no public code or weights were found in this round.",
+        "Current page borrows the display pattern only."
+      ],
+      "display_policy": "Use as UI reference for side-by-side corrected reflectance plus red pixel mask. Do not mark as executed model output."
+    },
+    {
+      "id": "modis_ensemble_dust_adapter",
+      "name": "MODIS Ensemble Dust Segmentation Adapter",
+      "source_url": "https://github.com/NuwanSriBandara/Ensemble-Deep-Learning-Dust-Storm-Detection",
+      "satellite_or_sensor": "MODIS RGB true-color imagery",
+      "spatial_resolution_or_scale": "MODIS scene resized to 256 x 256 training patches",
+      "input_type": "MODIS RGB dust-storm images",
+      "output_type": "ensemble semantic segmentation mask",
+      "primary_role": "transfer_template",
+      "status": "research_reference",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/dust_mask_schema.json",
+      "limitations": [
+        "Repository tree has README/dataset/figures only in this inspection.",
+        "Public Kaggle subset and training code path require separate download; no local inference was run."
+      ],
+      "display_policy": "Show as MODIS dust segmentation candidate, not as current production model."
+    },
+    {
+      "id": "modis_3dcnn_dust_adapter",
+      "name": "MODIS Multispectral 3D-CNN Dust Adapter",
+      "source_url": "https://github.com/Rivas-AI/dust-3dcnn",
+      "satellite_or_sensor": "MODIS Terra/Aqua multispectral",
+      "spatial_resolution_or_scale": "MODIS granule / patch inference",
+      "input_type": "processed .npy multispectral tensors",
+      "output_type": "dust probability, dust mask, side-by-side prediction image, metrics summary",
+      "primary_role": "main_dust_detection",
+      "status": "model_ready",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/dust_mask_schema.json",
+      "limitations": [
+        "Checkpoint was downloaded for audit from 3DCNN/big_epoch_3_finished.pth.",
+        "Pre-generated prediction images and test_results.txt were downloaded for UI reference.",
+        "Local evaluation metrics were parsed to src/dust/examples/modis_3dcnn_local_audit.json.",
+        "Processed .npy input folders are still missing locally, so no new local prediction was run.",
+        "Do not use the pre-generated reference image as current AOI evidence."
+      ],
+      "display_policy": "Show as MODIS multispectral 3D-CNN model-ready reference with checkpoint and pre-generated prediction, but not as current AOI inference."
+    },
+    {
+      "id": "smoke_plume_confounder_adapter",
+      "name": "Industrial Smoke Plume Confounder Adapter",
+      "source_url": "https://github.com/HSG-AIML/IndustrialSmokePlumeDetection",
+      "satellite_or_sensor": "Sentinel-2",
+      "spatial_resolution_or_scale": "Sentinel-2 patch segmentation/classification",
+      "input_type": "Sentinel-2 image patch",
+      "output_type": "smoke_probability, smoke_mask, smoke_conflict_flag",
+      "primary_role": "confounder_rejection",
+      "status": "research_reference",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/dust_mask_schema.json",
+      "limitations": [
+        "This is an industrial smoke plume model, not a dust model.",
+        "Weights and local Sentinel-2 inputs were not prepared in this round."
+      ],
+      "display_policy": "Use only as smoke conflict evidence. Never render its mask as a dust mask."
+    },
+    {
+      "id": "smokeviz_evidence_adapter",
+      "name": "SmokeViz Evidence Adapter",
+      "source_url": "https://github.com/reykoki/SmokeViz",
+      "satellite_or_sensor": "GOES / satellite smoke imagery practice",
+      "spatial_resolution_or_scale": "dataset and temporal alignment reference",
+      "input_type": "coarse annotation plus satellite imagery windows",
+      "output_type": "temporal alignment note and smoke-like plume evidence",
+      "primary_role": "confounder_rejection",
+      "status": "research_reference",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "evidence card only",
+      "limitations": [
+        "SmokeViz is smoke-focused, not dust-focused.",
+        "Use only for alignment and smoke confounder reasoning."
+      ],
+      "display_policy": "Show temporal-alignment logic as evidence method; do not call it dust inference."
+    },
+    {
+      "id": "burned_area_temporal_adapter",
+      "name": "BA-Net Burned Area Temporal Adapter",
+      "source_url": "https://github.com/mnpinto/banet",
+      "satellite_or_sensor": "VIIRS 750 m bands resampled to 0.01 degree grid",
+      "spatial_resolution_or_scale": "daily sequence / near-real-time burned area mapping",
+      "input_type": "VIIRS temporal sequence",
+      "output_type": "burned area evidence and dating support",
+      "primary_role": "confounder_rejection",
+      "status": "research_reference",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/dust_mask_schema.json",
+      "limitations": [
+        "Burned-area mapping is not a dust detector.",
+        "Weight download and active-fire data preparation were not run in this round."
+      ],
+      "display_policy": "Use only to weaken or support dust interpretation when fire/burned-area interference is plausible."
+    },
+    {
+      "id": "active_fire_confounder_adapter",
+      "name": "Active Fire Transfer-Learning Confounder Adapter",
+      "source_url": "https://github.com/Minoro/transfer-learning-landsat8-sentinel2",
+      "satellite_or_sensor": "Landsat-8 to Sentinel-2 SWIR/NIR",
+      "spatial_resolution_or_scale": "256 x 256 Sentinel-2 / Landsat patches",
+      "input_type": "SWIR/NIR active-fire image patch",
+      "output_type": "active fire probability and active fire mask",
+      "primary_role": "confounder_rejection",
+      "status": "research_reference",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/dust_mask_schema.json",
+      "limitations": [
+        "Active fire segmentation is not dust detection.",
+        "Weights are referenced through Google Drive; not downloaded locally."
+      ],
+      "display_policy": "Use as active-fire/smoke-source conflict check in high-resolution interpretation only."
+    },
+    {
+      "id": "floga_alignment_confounder_adapter",
+      "name": "FLOGA Alignment and Burned-Area Confounder Adapter",
+      "source_url": "https://github.com/Orion-AI-Lab/FLOGA",
+      "satellite_or_sensor": "Sentinel-2 and MODIS aligned bitemporal imagery",
+      "spatial_resolution_or_scale": "aligned Sentinel-2 / MODIS burned-area events",
+      "input_type": "pre/post aligned imagery and masks",
+      "output_type": "burned-area change evidence and alignment pattern",
+      "primary_role": "confounder_rejection",
+      "status": "research_reference",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/dust_mask_schema.json",
+      "limitations": [
+        "FLOGA is wildfire burned-area data/model, not dust.",
+        "Use only for pre/post alignment and burned scar exclusion logic."
+      ],
+      "display_policy": "Show as high-resolution evidence-chain pattern; keep wildfire-specific semantics out of the dust main result."
+    },
+    {
+      "id": "sentinel2_unet_burned_area_visual_reference",
+      "name": "Sentinel-2 U-Net Burned-Area Visual Reference",
+      "source_url": "https://github.com/dymaxionlabs/burned-area-detection",
+      "satellite_or_sensor": "Sentinel-2",
+      "spatial_resolution_or_scale": "patch-based semantic segmentation",
+      "input_type": "Sentinel-2 patches and burned-area labels",
+      "output_type": "prediction mask and postprocess visualization",
+      "primary_role": "ui_reference",
+      "status": "research_reference",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "visual workflow only",
+      "limitations": [
+        "Burned-area model is not dust.",
+        "Use only for mask rendering, postprocess and patch-to-scene reconstruction pattern."
+      ],
+      "display_policy": "Borrow mask rendering and postprocess pattern only."
+    },
+    {
+      "id": "sentinel2_pspnet_burned_area_visual_reference",
+      "name": "Sentinel-2 PSPNet Burned-Area Visual Reference",
+      "source_url": "https://github.com/prhuppertz/Burned_Area_Detection",
+      "satellite_or_sensor": "Sentinel-2",
+      "spatial_resolution_or_scale": "Sentinel-2 patches",
+      "input_type": "atmospherically corrected Sentinel-2 patches",
+      "output_type": "burned-area segmentation workflow reference",
+      "primary_role": "ui_reference",
+      "status": "research_reference",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "visual workflow only",
+      "limitations": [
+        "Not a dust model.",
+        "Training/checkpoints were not run locally."
+      ],
+      "display_policy": "Borrow pipeline display pattern only; keep out of dust main evidence unless fire interference is under review."
+    },
+    {
+      "id": "nasa_gibs_viirs_corrected_reflectance",
+      "name": "NASA GIBS VIIRS Corrected Reflectance",
+      "source_url": "https://gibs.earthdata.nasa.gov/",
+      "satellite_or_sensor": "VIIRS NOAA-20 / NOAA-21 / SNPP",
+      "spatial_resolution_or_scale": "daily global corrected reflectance",
+      "input_type": "GIBS WMS GetMap",
+      "output_type": "traceable true-color basemap",
+      "primary_role": "evidence_support",
+      "status": "data_ready",
+      "can_produce_pixel_mask": false,
+      "expected_output_schema": "basemap provenance",
+      "limitations": [
+        "Corrected reflectance is a basemap and model input/reference, not a dust mask by itself."
+      ],
+      "display_policy": "Use as required remote-sensing basemap with source badge and request metadata."
+    },
+    {
+      "id": "nasa_gibs_modis_corrected_reflectance",
+      "name": "NASA GIBS MODIS Corrected Reflectance",
+      "source_url": "https://gibs.earthdata.nasa.gov/",
+      "satellite_or_sensor": "MODIS Terra / Aqua",
+      "spatial_resolution_or_scale": "250 m daily true color",
+      "input_type": "GIBS WMS GetMap",
+      "output_type": "regional dust plume discovery basemap",
+      "primary_role": "evidence_support",
+      "status": "data_ready",
+      "can_produce_pixel_mask": false,
+      "expected_output_schema": "basemap provenance",
+      "limitations": [
+        "Useful for display and context; not a standalone dust detector."
+      ],
+      "display_policy": "Show as coarse/medium scale context and MODIS model input candidate."
+    },
+    {
+      "id": "deep_blue_aerosol_support",
+      "name": "VIIRS / MODIS Deep Blue Aerosol Support",
+      "source_url": "https://gibs.earthdata.nasa.gov/",
+      "satellite_or_sensor": "VIIRS / MODIS Deep Blue aerosol products",
+      "spatial_resolution_or_scale": "coarse daily aerosol support layer",
+      "input_type": "GIBS aerosol layer or downstream product",
+      "output_type": "aerosol_support, aerosol_conflict, missing_data_flag",
+      "primary_role": "evidence_support",
+      "status": "data_ready",
+      "can_produce_pixel_mask": false,
+      "expected_output_schema": "evidence support record",
+      "limitations": [
+        "Aerosol products are supportive evidence only and can be coarse or missing.",
+        "They must not replace pixel-level dust segmentation."
+      ],
+      "display_policy": "Show as supportive/contradictory evidence next to the main mask."
+    },
+    {
+      "id": "era5_merra2_meteorology_evidence",
+      "name": "Meteorology Evidence Adapter",
+      "source_url": "https://power.larc.nasa.gov/",
+      "satellite_or_sensor": "NASA POWER hourly point meteorology; ERA5/MERRA-2 target slot",
+      "spatial_resolution_or_scale": "point-sampled hourly meteorological evidence",
+      "input_type": "wind, humidity, pressure, boundary layer variables",
+      "output_type": "wind_support, humidity_support, transport_direction, precursor_signal_summary",
+      "primary_role": "evidence_support",
+      "status": "data_ready",
+      "can_produce_pixel_mask": false,
+      "expected_output_schema": "meteorology evidence record",
+      "limitations": [
+        "Current UI uses a NASA POWER point-sampled snapshot, not direct gridded ERA5/MERRA-2 ingest.",
+        "Meteorology supports or conflicts with transport plausibility; it does not classify dust pixels.",
+        "Direct ERA5/MERRA-2 raw-grid integration remains a future step."
+      ],
+      "display_policy": "Show as executed meteorology evidence when the NASA POWER snapshot is loaded; label limitations and do not treat it as a dust mask."
+    },
+    {
+      "id": "sentinel_high_resolution_context",
+      "name": "Sentinel-2 / Sentinel-1 High-Resolution Context",
+      "source_url": "https://sentinel.esa.int/",
+      "satellite_or_sensor": "Sentinel-2 MSI / Sentinel-1 SAR",
+      "spatial_resolution_or_scale": "10-20 m optical, SAR supporting context",
+      "input_type": "high-resolution source-region and confounder context",
+      "output_type": "source-region plausibility, temporal-alignment note, supporting evidence",
+      "primary_role": "evidence_support",
+      "status": "research_reference",
+      "can_produce_pixel_mask": false,
+      "expected_output_schema": "high-resolution evidence record",
+      "limitations": [
+        "High-resolution layer is supporting evidence unless same-day coverage is available.",
+        "Sentinel-1 is not a main atmospheric dust plume detector."
+      ],
+      "display_policy": "Show under Step 3 interpretation; mark temporal mismatch if not same-day."
+    },
+    {
+      "id": "hexi_high_resolution_scene_selector",
+      "name": "Hexi High-Resolution Sentinel-2 Scene Selector",
+      "source_url": "local://src/dust/tools/selectHexiHighResolutionScene.mjs",
+      "satellite_or_sensor": "Sentinel-2 L2A thumbnail via Earth Search",
+      "spatial_resolution_or_scale": "high-resolution supporting context scene selection",
+      "input_type": "Earth Search Sentinel-2 L2A candidates, thumbnail display coverage score, Hexi AOI/date window",
+      "output_type": "selected high-resolution thumbnail asset and scene-selection manifest JSON",
+      "primary_role": "evidence_support",
+      "status": "runnable",
+      "can_produce_pixel_mask": false,
+      "expected_output_schema": "src/dust/examples/hexi_high_resolution_scene_selection.json",
+      "limitations": [
+        "Selects a display-quality high-resolution context scene; it does not classify dust pixels.",
+        "Selected scene is same-day but remains supporting-only because it is source/confounder context, not airborne dust segmentation.",
+        "No Sentinel-2 dust, smoke, fire or burned-area model is executed by this selector."
+      ],
+      "display_policy": "Show as high-resolution context selection evidence. Do not present selected thumbnail or AOT support overlay as same-day dust segmentation."
+    },
+    {
+      "id": "hexi_real_gibs_data_run",
+      "name": "Hexi Real GIBS Data Export Run",
+      "source_url": "local://src/dust/tools/exportRealGibsDataRun.mjs",
+      "satellite_or_sensor": "AIRS / VIIRS NOAA-20 / MODIS Terra",
+      "spatial_resolution_or_scale": "coarse and medium current-AOI rendered remote-sensing products",
+      "input_type": "NASA GIBS WMS GetMap for Hexi Corridor 2021-03-15",
+      "output_type": "local basemap/product PNG/JPEG files and current-AOI red support mask PNG",
+      "primary_role": "evidence_support",
+      "status": "runnable",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/examples/hexi_real_gibs_data_run.json",
+      "limitations": [
+        "Exports real rendered remote-sensing products, not raw scientific arrays.",
+        "The red mask is data-derived support from VIIRS AOT valid coverage + dust-like Aerosol Type coverage, not learned model inference.",
+        "Round 041 keeps this rendered GIBS support output for comparison, but raw VIIRS Deep Blue L2 native footprint output is now available through the separate footprint adapter."
+      ],
+      "display_policy": "Show as executed real current-AOI data acquisition and support-mask export."
+    },
+    {
+      "id": "rivas_3dcnn_model_output_import",
+      "name": "Rivas MODIS 3D-CNN Model Output Import",
+      "source_url": "local://src/dust/tools/importRivas3dcnnModelOutput.mjs",
+      "satellite_or_sensor": "MODIS Terra/Aqua multispectral",
+      "spatial_resolution_or_scale": "repository precomputed MODIS case output",
+      "input_type": "cloned dust-3dcnn checkpoint, metrics and precomputed prediction PNG",
+      "output_type": "prediction panel, red threshold mask, red prediction overlay and metrics JSON",
+      "primary_role": "main_dust_detection",
+      "status": "data_ready",
+      "can_produce_pixel_mask": true,
+      "expected_output_schema": "src/dust/examples/rivas_3dcnn_model_output_import.json",
+      "limitations": [
+        "This imports a real precomputed model output from the cloned repository.",
+        "It is not current Hexi AOI inference because processed MODIS .npy inputs are still missing.",
+        "Round 032 local execution attempt is blocked: PyTorch is absent and Box processed-data credentials are not configured."
+      ],
+      "display_policy": "Show as real MODIS 3D-CNN model-output artifact only; do not replace the current AOI VIIRS red mask."
+    },
+    {
+      "id": "dust_model_adapter_output_contract_matrix",
+      "name": "Dust Model Adapter Output Contract Matrix",
+      "source_url": "local://src/dust/examples/dust_model_adapter_output_contracts.json",
+      "satellite_or_sensor": "FY-4A / VIIRS / MODIS / Sentinel-2",
+      "spatial_resolution_or_scale": "coarse|medium|high adapter replacement gates",
+      "input_type": "registered model adapters, current support masks, required model outputs and promotion blockers",
+      "output_type": "adapter output contract matrix and current-mask replacement decisions",
+      "primary_role": "evidence_support",
+      "status": "data_ready",
+      "can_produce_pixel_mask": false,
+      "expected_output_schema": "src/dust/examples/dust_model_adapter_output_contracts.json",
+      "limitations": [
+        "This matrix does not run any dust model.",
+        "It defines what a model must output before replacing the current red support masks.",
+        "Smoke, active-fire and burned-area contracts are conflict-evidence contracts only and must never replace a dust mask."
+      ],
+      "display_policy": "Show as the adapter-to-mask replacement contract so users can see exactly what is needed for Dust-Mamba, VIIRS, MODIS and confounder tools to graduate from reference/support to real model output."
+    },
+    {
+      "id": "hexi_confounder_evidence_matrix",
+      "name": "Hexi Confounder Rejection Evidence Matrix",
+      "source_url": "local://src/dust/examples/hexi_confounder_evidence.json",
+      "satellite_or_sensor": "AIRS / VIIRS / Sentinel-2",
+      "spatial_resolution_or_scale": "coarse|medium|high evidence chain",
+      "input_type": "registered smoke, active-fire, burned-area, cloud/background and temporal-mismatch checks",
+      "output_type": "pass/fail/unknown confounder evidence records",
+      "primary_role": "confounder_rejection",
+      "status": "data_ready",
+      "can_produce_pixel_mask": false,
+      "expected_output_schema": "src/dust/examples/hexi_confounder_evidence.json",
+      "limitations": [
+        "This matrix organizes evidence status; it does not run smoke, fire or burned-area models.",
+        "Unknown checks must not be interpreted as supporting dust.",
+        "It blocks model-promotion optimism until same-AOI/time confounder records are available."
+      ],
+      "display_policy": "Show in the agent evidence chain as explicit pass/fail/unknown conflict checks. Use it to explain why current red masks remain support outputs, not dust-model inference."
+    }
+  ]
+}

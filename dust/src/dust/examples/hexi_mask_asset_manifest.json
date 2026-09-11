@@ -1,0 +1,84 @@
+{
+  "round": "dust-round-043",
+  "tool_id": "hexi_multiscale_png_mask_asset_adapter",
+  "status": "executed_png_mask_asset_export",
+  "current_aoi_inference": "learned_model_inference_from_current_aoi_weak_labels",
+  "actual_model_runs": [
+    "viirs_element84_style_weak_label_model_adapter"
+  ],
+  "event_id": "hexi-corridor-2021-03-15",
+  "assets": [
+    {
+      "scale": "coarse",
+      "path": "src/dust/examples/masks/hexi_coarse_red_pixel_mask_dust-round-043.png",
+      "type": "png",
+      "width": 480,
+      "height": 280,
+      "active_red_pixels": 34,
+      "tool_id": "gibs_rendered_dust_score_threshold_adapter",
+      "sensor": "AIRS Aqua Dust Score / MODIS Terra context",
+      "datetime": "2021-03-15T06:00:00Z",
+      "mask_area_km2": 28940,
+      "threshold": 0.5,
+      "status": "rendered-product threshold, not model inference",
+      "current_aoi_inference": "not_model_inference",
+      "pixel_class": "dust_anomaly",
+      "color": "#ff0000",
+      "opacity_policy": "cell display score controls alpha; transparent background"
+    },
+    {
+      "scale": "medium",
+      "path": "src/dust/examples/masks/hexi_medium_red_pixel_mask_dust-round-043.png",
+      "type": "png",
+      "width": 2400,
+      "height": 1160,
+      "active_red_pixels": 1161,
+      "tool_id": "viirs_multichannel_weak_label_segmentation_adapter",
+      "sensor": "VIIRS NOAA-20 Corrected Reflectance",
+      "datetime": "2021-03-15T06:00:00Z",
+      "mask_area_km2": 55662,
+      "threshold": 0.79,
+      "status": "current-AOI VIIRS weak-label learned inference",
+      "current_aoi_inference": "learned_model_inference_from_current_aoi_weak_labels",
+      "pixel_class": "dust_anomaly",
+      "color": "#ff0000",
+      "opacity_policy": "cell display score controls alpha; transparent background"
+    },
+    {
+      "scale": "high",
+      "path": "src/dust/examples/masks/hexi_high_red_pixel_mask_dust-round-043.png",
+      "type": "png",
+      "width": 2240,
+      "height": 2240,
+      "active_red_pixels": 360,
+      "tool_id": "sentinel2_raw_aot_cog_audit_adapter",
+      "sensor": "Sentinel-2 L2A AOT + B04/B08 + SCL COG + visual thumbnail",
+      "datetime": "2021-03-15T04:47:36.583Z",
+      "mask_area_km2": 5,
+      "threshold": 777,
+      "status": "same-day raw Sentinel-2 support / not model inference",
+      "current_aoi_inference": "not_model_inference",
+      "pixel_class": "dust_anomaly",
+      "color": "#ff0000",
+      "opacity_policy": "cell display score controls alpha; transparent background"
+    }
+  ],
+  "evidence": {
+    "main": [
+      "Transparent red PNG mask assets were exported for coarse, medium and high display grids.",
+      "Each PNG preserves visible pixel cells instead of converting the anomaly into a polygon-only layer."
+    ],
+    "supporting": [
+      "PNG assets can be overlaid on the existing basemaps for PPT screenshots.",
+      "The medium asset corresponds to the current-AOI VIIRS weak-label learned mask."
+    ],
+    "conflicting": [
+      "The medium PNG is a weak-label model display asset, not Element84 public weights.",
+      "The high-resolution PNG remains supporting-only because no Sentinel-2 dust model was executed."
+    ],
+    "precursor": [
+      "Meteorology and source-region precursor evidence remain separate from the PNG mask asset export."
+    ]
+  },
+  "display_policy": "Use PNG assets for pixel-level screenshot overlays and mask-output previews. Preserve the medium weak-label inference label and do not present it as Dust-Mamba or Element84 public weights."
+}

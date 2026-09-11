@@ -1,0 +1,404 @@
+{
+  "round": "dust-round-037",
+  "tool_id": "dust_model_adapter_output_contract_matrix",
+  "status": "adapter_output_contract_ready_model_promotion_blocked",
+  "purpose": "Declare the exact outputs a real model adapter must produce before it may replace any current red pixel-level support/demo mask.",
+  "current_aoi_inference": "not_run",
+  "actual_model_runs": [],
+  "contracts": [
+    {
+      "adapter_id": "DustMambaAdapter",
+      "tool_id": "dust_mamba_adapter",
+      "primary_role": "main_dust_detection",
+      "target_scale": "coarse",
+      "satellite_or_sensor": "FY-4A AGRI multi-channel + MERRA-2 / ERA5",
+      "current_status": "blocked",
+      "current_ui_replacement_target": "coarse red support pixels from gibs_rendered_dust_score_threshold_adapter",
+      "minimum_inputs": [
+        "Dust-Mamba checkpoint file",
+        "LSDSSIMR/FY-4A HDF5 event sample",
+        "matching meteorological reanalysis channels",
+        "AOI/date metadata"
+      ],
+      "required_outputs": [
+        { "name": "occurrence_mask", "type": "tif|png|geojson", "required": true },
+        { "name": "intensity_mask", "type": "tif|png", "required": true },
+        { "name": "probability_map", "type": "tif|png|npy", "required": true },
+        { "name": "metadata_json", "type": "json", "required": true }
+      ],
+      "required_metadata": [
+        "model_name",
+        "source_url",
+        "checkpoint_path",
+        "input_channels",
+        "satellite_time",
+        "aoi",
+        "threshold",
+        "mask_area_km2",
+        "confidence_summary"
+      ],
+      "can_replace_current_red_mask_now": false,
+      "promotion_blockers": [
+        "checkpoint not local",
+        "LSDSSIMR HDF5 event sample not local",
+        "no current AOI inference run"
+      ],
+      "display_policy": "Show as P0 target model. Do not label current coarse red pixels as Dust-Mamba output until inference writes the required masks and metadata."
+    },
+    {
+      "adapter_id": "VIIRSSandstormSegmentationAdapter",
+      "tool_id": "viirs_sandstorm_segmentation_adapter",
+      "primary_role": "main_dust_detection",
+      "target_scale": "medium",
+      "satellite_or_sensor": "VIIRS corrected reflectance",
+      "current_status": "research_reference",
+      "current_ui_replacement_target": "medium shape-filtered red support pixels from gibs_rendered_plume_shape_filter_adapter",
+      "minimum_inputs": [
+        "VIIRS corrected reflectance scene",
+        "runnable VIIRS dust semantic segmentation code and weights",
+        "AOI/date crop",
+        "threshold policy"
+      ],
+      "required_outputs": [
+        { "name": "dust_probability_map", "type": "tif|png|npy", "required": true },
+        { "name": "binary_dust_mask", "type": "tif|png|geojson", "required": true },
+        { "name": "metadata_json", "type": "json", "required": true }
+      ],
+      "required_metadata": [
+        "model_name",
+        "source_url",
+        "input_scene",
+        "corrected_reflectance_layer",
+        "satellite_time",
+        "aoi",
+        "threshold",
+        "mask_area_km2",
+        "confidence_summary"
+      ],
+      "can_replace_current_red_mask_now": false,
+      "promotion_blockers": [
+        "public article describes the method but no runnable public weights/code are connected in this workspace",
+        "current mask is rendered AOT + Aerosol Type support, not VIIRS dust segmentation",
+        "no current AOI inference run"
+      ],
+      "display_policy": "Use as the medium-scale semantic segmentation target and UI pattern. Current VIIRS red pixels remain support evidence."
+    },
+    {
+      "adapter_id": "MODISEnsembleDustAdapter",
+      "tool_id": "modis_ensemble_dust_adapter",
+      "primary_role": "transfer_template",
+      "target_scale": "medium",
+      "satellite_or_sensor": "MODIS RGB true-color imagery",
+      "current_status": "research_reference",
+      "current_ui_replacement_target": "future MODIS medium-scale candidate mask slot",
+      "minimum_inputs": [
+        "MODIS RGB scene or Kaggle subset",
+        "trained ensemble weights",
+        "AOI/date crop"
+      ],
+      "required_outputs": [
+        { "name": "ensemble_probability_map", "type": "tif|png|npy", "required": true },
+        { "name": "binary_dust_mask", "type": "tif|png|geojson", "required": true },
+        { "name": "metadata_json", "type": "json", "required": true }
+      ],
+      "required_metadata": [
+        "model_name",
+        "source_url",
+        "ensemble_members",
+        "input_scene",
+        "satellite_time",
+        "aoi",
+        "threshold",
+        "mask_area_km2"
+      ],
+      "can_replace_current_red_mask_now": false,
+      "promotion_blockers": [
+        "no local runnable inference path",
+        "no local current AOI MODIS inputs",
+        "not executed in this round"
+      ],
+      "display_policy": "Show as MODIS segmentation candidate or training baseline only."
+    },
+    {
+      "adapter_id": "MODIS3DCNNDustAdapter",
+      "tool_id": "modis_3dcnn_dust_adapter",
+      "primary_role": "main_dust_detection",
+      "target_scale": "medium",
+      "satellite_or_sensor": "MODIS Terra/Aqua multispectral",
+      "current_status": "checkpoint_available_but_data_missing",
+      "current_ui_replacement_target": "future MODIS multispectral current-AOI red mask slot",
+      "minimum_inputs": [
+        "local checkpoint",
+        "processed .npy MODIS case folder",
+        "x.npy valid-pixel index",
+        "AOI/date metadata"
+      ],
+      "required_outputs": [
+        { "name": "dust_probability_map", "type": "tif|png|npy", "required": true },
+        { "name": "binary_dust_mask", "type": "tif|png|geojson", "required": true },
+        { "name": "prediction_preview", "type": "png", "required": true },
+        { "name": "metrics_summary", "type": "json", "required": true },
+        { "name": "metadata_json", "type": "json", "required": true }
+      ],
+      "required_metadata": [
+        "model_name",
+        "source_url",
+        "checkpoint_path",
+        "processed_input_path",
+        "satellite_time",
+        "aoi",
+        "threshold",
+        "mask_area_km2"
+      ],
+      "can_replace_current_red_mask_now": false,
+      "promotion_blockers": [
+        "processed .npy current AOI inputs missing",
+        "reference prediction image is not current AOI evidence",
+        "no current AOI inference run"
+      ],
+      "display_policy": "Show model readiness and checkpoint status. Do not display reference prediction as current dust mask."
+    },
+    {
+      "adapter_id": "SmokePlumeConfounderAdapter",
+      "tool_id": "smoke_plume_confounder_adapter",
+      "primary_role": "confounder_rejection",
+      "target_scale": "high",
+      "satellite_or_sensor": "Sentinel-2",
+      "current_status": "research_reference",
+      "current_ui_replacement_target": "confounder evidence only; never a dust mask replacement",
+      "minimum_inputs": [
+        "Sentinel-2 image patch",
+        "smoke plume segmentation/classification weights",
+        "AOI/date metadata"
+      ],
+      "required_outputs": [
+        { "name": "smoke_probability", "type": "number|raster", "required": true },
+        { "name": "smoke_mask", "type": "tif|png|geojson", "required": false },
+        { "name": "smoke_conflict_flag", "type": "boolean|string", "required": true },
+        { "name": "metadata_json", "type": "json", "required": true }
+      ],
+      "required_metadata": [
+        "model_name",
+        "source_url",
+        "input_scene",
+        "satellite_time",
+        "aoi",
+        "threshold",
+        "confidence_summary"
+      ],
+      "can_replace_current_red_mask_now": false,
+      "promotion_blockers": [
+        "smoke model is not dust inference",
+        "no Sentinel-2 smoke run for this AOI/time"
+      ],
+      "display_policy": "Use only to weaken or support the dust interpretation as conflict evidence."
+    },
+    {
+      "adapter_id": "SmokeVizEvidenceAdapter",
+      "tool_id": "smokeviz_evidence_adapter",
+      "primary_role": "confounder_rejection",
+      "target_scale": "coarse|high",
+      "satellite_or_sensor": "smoke imagery alignment reference",
+      "current_status": "research_reference",
+      "current_ui_replacement_target": "temporal alignment note; never a dust mask replacement",
+      "minimum_inputs": [
+        "smoke annotation time window",
+        "satellite imagery window",
+        "alignment rule"
+      ],
+      "required_outputs": [
+        { "name": "temporal_alignment_note", "type": "json|string", "required": true },
+        { "name": "smoke_like_plume_check", "type": "pass|fail|unknown", "required": true }
+      ],
+      "required_metadata": [
+        "source_url",
+        "alignment_window",
+        "limitations"
+      ],
+      "can_replace_current_red_mask_now": false,
+      "promotion_blockers": [
+        "method reference only",
+        "not dust inference"
+      ],
+      "display_policy": "Show temporal alignment practice and smoke-like plume check only."
+    },
+    {
+      "adapter_id": "BurnedAreaTemporalAdapter",
+      "tool_id": "burned_area_temporal_adapter",
+      "primary_role": "confounder_rejection",
+      "target_scale": "high",
+      "satellite_or_sensor": "VIIRS temporal sequence / burned-area reference",
+      "current_status": "research_reference",
+      "current_ui_replacement_target": "burned-area conflict evidence only",
+      "minimum_inputs": [
+        "temporal imagery sequence",
+        "burned-area model/data assets",
+        "AOI/date metadata"
+      ],
+      "required_outputs": [
+        { "name": "burned_area_probability", "type": "number|raster", "required": true },
+        { "name": "burned_area_mask", "type": "tif|png|geojson", "required": false },
+        { "name": "burned_area_conflict_flag", "type": "boolean|string", "required": true }
+      ],
+      "required_metadata": [
+        "source_url",
+        "input_scene_or_sequence",
+        "aoi",
+        "temporal_window",
+        "limitations"
+      ],
+      "can_replace_current_red_mask_now": false,
+      "promotion_blockers": [
+        "burned-area mapping is not dust detection",
+        "not executed for this AOI/time"
+      ],
+      "display_policy": "Use only as burned-area/fire-scar rejection evidence."
+    },
+    {
+      "adapter_id": "ActiveFireConfounderAdapter",
+      "tool_id": "active_fire_confounder_adapter",
+      "primary_role": "confounder_rejection",
+      "target_scale": "high",
+      "satellite_or_sensor": "Landsat-8 to Sentinel-2 SWIR/NIR",
+      "current_status": "research_reference",
+      "current_ui_replacement_target": "active-fire conflict evidence only",
+      "minimum_inputs": [
+        "SWIR/NIR high-resolution patch",
+        "active-fire model weights",
+        "AOI/date metadata"
+      ],
+      "required_outputs": [
+        { "name": "active_fire_probability", "type": "number|raster", "required": true },
+        { "name": "active_fire_mask", "type": "tif|png|geojson", "required": false },
+        { "name": "fire_conflict_flag", "type": "boolean|string", "required": true }
+      ],
+      "required_metadata": [
+        "source_url",
+        "input_scene",
+        "aoi",
+        "threshold",
+        "limitations"
+      ],
+      "can_replace_current_red_mask_now": false,
+      "promotion_blockers": [
+        "active-fire model is not dust detection",
+        "weights/input patch not prepared locally"
+      ],
+      "display_policy": "Use only to flag possible smoke/fire source that weakens dust interpretation."
+    },
+    {
+      "adapter_id": "FLOGAAlignmentConfounderAdapter",
+      "tool_id": "floga_alignment_confounder_adapter",
+      "primary_role": "confounder_rejection",
+      "target_scale": "high",
+      "satellite_or_sensor": "Sentinel-2 / MODIS aligned bitemporal imagery",
+      "current_status": "research_reference",
+      "current_ui_replacement_target": "alignment and burned-scar conflict evidence only",
+      "minimum_inputs": [
+        "pre/post aligned imagery",
+        "cloud/water/land-cover masks",
+        "burned-area change evidence"
+      ],
+      "required_outputs": [
+        { "name": "alignment_report", "type": "json", "required": true },
+        { "name": "burned_scar_conflict_flag", "type": "boolean|string", "required": true }
+      ],
+      "required_metadata": [
+        "source_url",
+        "pre_image_time",
+        "post_image_time",
+        "aoi",
+        "limitations"
+      ],
+      "can_replace_current_red_mask_now": false,
+      "promotion_blockers": [
+        "wildfire/burned-area dataset is not dust inference",
+        "not executed for this AOI/time"
+      ],
+      "display_policy": "Borrow alignment and change-detection pattern only; keep out of the dust main mask."
+    },
+    {
+      "adapter_id": "Sentinel2UNetBurnedAreaVisualReference",
+      "tool_id": "sentinel2_unet_burned_area_visual_reference",
+      "primary_role": "ui_reference",
+      "target_scale": "high",
+      "satellite_or_sensor": "Sentinel-2",
+      "current_status": "research_reference",
+      "current_ui_replacement_target": "mask rendering and patch-to-scene reconstruction reference only",
+      "minimum_inputs": [
+        "Sentinel-2 patches",
+        "burned-area model training assets"
+      ],
+      "required_outputs": [
+        { "name": "visual_workflow_note", "type": "json|string", "required": true }
+      ],
+      "required_metadata": [
+        "source_url",
+        "limitations"
+      ],
+      "can_replace_current_red_mask_now": false,
+      "promotion_blockers": [
+        "not a dust model",
+        "training/checkpoints not run locally"
+      ],
+      "display_policy": "Use only for UI pattern and postprocess reference."
+    },
+    {
+      "adapter_id": "Sentinel2PSPNetBurnedAreaVisualReference",
+      "tool_id": "sentinel2_pspnet_burned_area_visual_reference",
+      "primary_role": "ui_reference",
+      "target_scale": "high",
+      "satellite_or_sensor": "Sentinel-2",
+      "current_status": "research_reference",
+      "current_ui_replacement_target": "segmentation workflow reference only",
+      "minimum_inputs": [
+        "Sentinel-2 patches",
+        "burned-area training pipeline"
+      ],
+      "required_outputs": [
+        { "name": "visual_workflow_note", "type": "json|string", "required": true }
+      ],
+      "required_metadata": [
+        "source_url",
+        "limitations"
+      ],
+      "can_replace_current_red_mask_now": false,
+      "promotion_blockers": [
+        "not a dust model",
+        "not executed locally"
+      ],
+      "display_policy": "Use only as a reference for segmentation-mask visualization."
+    }
+  ],
+  "replacement_matrix": [
+    {
+      "current_mask_tool": "gibs_rendered_dust_score_threshold_adapter",
+      "scale": "coarse",
+      "current_mask_status": "rendered-product support mask",
+      "target_adapter": "DustMambaAdapter",
+      "replacement_decision": "blocked"
+    },
+    {
+      "current_mask_tool": "gibs_rendered_plume_shape_filter_adapter",
+      "scale": "medium",
+      "current_mask_status": "shape-filtered rendered AOT + Aerosol Type support mask",
+      "target_adapter": "VIIRSSandstormSegmentationAdapter",
+      "replacement_decision": "blocked"
+    },
+    {
+      "current_mask_tool": "modis_3dcnn_dust_adapter",
+      "scale": "medium",
+      "current_mask_status": "checkpoint/model-ready reference only",
+      "target_adapter": "MODIS3DCNNDustAdapter",
+      "replacement_decision": "blocked_by_processed_input"
+    },
+    {
+      "current_mask_tool": "sentinel_high_resolution_context",
+      "scale": "high",
+      "current_mask_status": "same-day SCL-screened Sentinel-2 AOT/B04/B08 support context / not model inference",
+      "target_adapter": "SmokePlumeConfounderAdapter + ActiveFireConfounderAdapter + BurnedAreaTemporalAdapter",
+      "replacement_decision": "confounder_only_never_dust_mask"
+    }
+  ],
+  "fail_closed_policy": "A red mask can be promoted only when a sensor-specific adapter writes the required mask/probability/metadata outputs for the current AOI/time. Smoke, fire and burned-area adapters may only create conflict evidence and must never replace a dust mask."
+}

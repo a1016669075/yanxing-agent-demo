@@ -1,0 +1,157 @@
+{
+  "round": "dust-round-043",
+  "tool_id": "hexi_multiscale_pixel_lock_audit_adapter",
+  "status": "executed_multiscale_display_mask_export",
+  "current_aoi_inference": "learned_model_inference_from_current_aoi_weak_labels",
+  "actual_model_runs": [
+    "viirs_multichannel_weak_label_segmentation_adapter"
+  ],
+  "event_id": "hexi-corridor-2021-03-15",
+  "aoi": {
+    "bbox": [
+      94,
+      37.4,
+      104.5,
+      42.5
+    ],
+    "crs": "EPSG:4326"
+  },
+  "scale_order": [
+    "coarse",
+    "medium",
+    "high"
+  ],
+  "scale_summaries": [
+    {
+      "scale": "coarse",
+      "sensor": "AIRS Aqua Dust Score / MODIS Terra context",
+      "datetime": "2021-03-15T06:00:00Z",
+      "bbox": [
+        94,
+        37.4,
+        104.5,
+        42.5
+      ],
+      "mask_tool_id": "gibs_rendered_dust_score_threshold_adapter",
+      "mask_type": "rendered-raster-threshold-grid",
+      "mask_status": "rendered-product threshold, not model inference",
+      "active_red_pixels": 34,
+      "mask_area_km2": 28940,
+      "grid": {
+        "columns": 24,
+        "rows": 14
+      },
+      "display_cell_size_degrees": {
+        "lon": 0.4375,
+        "lat": 0.364286
+      },
+      "estimated_area_per_active_cell_km2": 851.18,
+      "promotion_status": "display-only support mask / model promotion blocked",
+      "limitations": [
+        "Display grid export, not native sensor raster.",
+        "Rendered product support, not model inference."
+      ]
+    },
+    {
+      "scale": "medium",
+      "sensor": "VIIRS NOAA-20 Corrected Reflectance",
+      "datetime": "2021-03-15T06:00:00Z",
+      "bbox": [
+        94,
+        37.4,
+        104.5,
+        42.5
+      ],
+      "mask_tool_id": "viirs_multichannel_weak_label_segmentation_adapter",
+      "mask_type": "png+grid",
+      "mask_status": "current-AOI VIIRS weak-label learned inference",
+      "active_red_pixels": 1161,
+      "mask_area_km2": 55662,
+      "grid": {
+        "columns": 120,
+        "rows": 58
+      },
+      "display_cell_size_degrees": {
+        "lon": 0.0875,
+        "lat": 0.087931
+      },
+      "estimated_area_per_active_cell_km2": 47.94,
+      "promotion_status": "weak-label VIIRS model executed",
+      "limitations": [
+        "Current-AOI weak-label classifier, not Element84 public weights.",
+        "Weak labels come from VIIRS Deep Blue L2 footprint thresholds.",
+        "Not Dust-Mamba inference."
+      ]
+    },
+    {
+      "scale": "high",
+      "sensor": "Sentinel-2 L2A AOT + B04/B08 + SCL COG + visual thumbnail",
+      "datetime": "2021-03-15T04:47:36.583Z",
+      "bbox": [
+        92.99977821837051,
+        38.755690205950245,
+        94.28126851320825,
+        39.750258916394806
+      ],
+      "mask_tool_id": "sentinel2_raw_aot_cog_audit_adapter",
+      "mask_type": "raw-cog-aot-ndvi-source-grid",
+      "mask_status": "same-day raw Sentinel-2 support, not model inference",
+      "active_red_pixels": 360,
+      "mask_area_km2": 5,
+      "grid": {
+        "columns": 160,
+        "rows": 160
+      },
+      "display_cell_size_degrees": {
+        "lon": 0.008009,
+        "lat": 0.006216
+      },
+      "estimated_area_per_active_cell_km2": 0.01,
+      "promotion_status": "supporting-only / no Sentinel-2 dust model",
+      "limitations": [
+        "Sentinel-2 image is same-day but covers only the selected MGRS tile footprint.",
+        "High red cells are raw AOT/B04/B08 source support for source/confounder interpretation.",
+        "No high-resolution dust model was executed."
+      ]
+    }
+  ],
+  "lock_chain": [
+    "coarse: regional rendered AIRS Dust Score support pixels flag the Hexi Corridor anomaly area",
+    "medium: VIIRS corrected reflectance is localized by current-AOI weak-label learned pixel inference",
+    "high: same-day Sentinel-2 raw AOT/B04/B08 context remains supporting evidence for source/confounder interpretation only"
+  ],
+  "geojson": {
+    "path": "src/dust/examples/hexi_multiscale_pixel_masks.geojson",
+    "feature_count": 1555
+  },
+  "evidence": {
+    "main": [
+      "All currently visible red display pixels were exported per scale as EPSG:4326 polygon features.",
+      "The audit keeps coarse, medium and high scale mask provenance separate."
+    ],
+    "supporting": [
+      "Medium-scale pixels preserve the learned weak-label VIIRS output and its threshold.",
+      "High-resolution cells come from same-day raw Sentinel-2 COG support and are available for source-region discussion only."
+    ],
+    "conflicting": [
+      "Medium exported cells are weak-label inference, not Element84 public weights.",
+      "High-resolution cells must not be treated as dust segmentation."
+    ],
+    "precursor": [
+      "Meteorology and historical-corridor evidence remain separate evidence-chain entries."
+    ]
+  },
+  "provenance": {
+    "model_name": "multi-scale display pixel-lock export",
+    "model_url": "local://src/dust/tools/exportHexiMultiscalePixelLock.mjs",
+    "data_source": "/dust page debug state with NASA GIBS and Earth Search display layers",
+    "checkpoint": "not applicable",
+    "run_time": "2026-05-19T10:01:56.716Z",
+    "limitations": [
+      "display/audit grids, not native sensor rasters",
+      "medium scale is weak-label learned inference",
+      "high-resolution grid is same-day supporting-only, not model inference"
+    ]
+  },
+  "display_policy": "Use to explain multi-scale pixel-lock flow across coarse, medium and high views. Keep weak-label VIIRS inference separate from support-only layers."
+}

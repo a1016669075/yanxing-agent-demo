@@ -1,0 +1,79 @@
+
+Folder: A2024116.0350 — Samples: 2735100
+   MSE: 0.029486
+   R² Score: -1.677
+   Weighted MSE: 0.004336
+   Accuracy: 0.845
+
+Folder: A2024116.0530 — Samples: 2735100
+   MSE: 0.039171
+   R² Score: -0.879
+   Weighted MSE: 0.011655
+   Accuracy: 0.771
+
+Folder: A2025073.2005 — Samples: 2735100
+   MSE: 0.048263
+   R² Score: -2.713
+   Weighted MSE: 0.010314
+   Accuracy: 0.943
+
+Folder: A2025104.1045 — Samples: 2735100
+   MSE: 0.040240
+   R² Score: -2.048
+   Weighted MSE: 0.009885
+   Accuracy: 0.961
+
+Folder: A2025108.2135 — Samples: 2735100
+   MSE: 0.026042
+   R² Score: -0.705
+   Weighted MSE: 0.005031
+   Accuracy: 0.928
+
+Folder: A2025109.2035 — Samples: 2735100
+   MSE: 0.042751
+   R² Score: -3.189
+   Weighted MSE: 0.007023
+   Accuracy: 0.972
+
+Folder: A2025109.2040 — Samples: 2735100
+   MSE: 0.041401
+   R² Score: -1.509
+   Weighted MSE: 0.011576
+   Accuracy: 0.865
+
+Folder: A2025117.2055 — Samples: 2735100
+   MSE: 0.064984
+   R² Score: -2.228
+   Weighted MSE: 0.017212
+   Accuracy: 0.838
+
+Folder: T2024237.1030 — Samples: 2735100
+   MSE: 0.013756
+   R² Score: 0.253
+   Weighted MSE: 0.001358
+   Accuracy: 0.883
+
+Folder: T2025073.1705 — Samples: 2748600
+   MSE: 0.004169
+   R² Score: 0.882
+   Weighted MSE: 0.001349
+   Accuracy: 0.973
+
+Folder: T2025086.0420 — Samples: 2735100
+   MSE: 0.026680
+   R² Score: 0.668
+   Weighted MSE: 0.012808
+   Accuracy: 0.820
+
+Folder: T2025108.1715 — Samples: 2735100
+   MSE: 0.040496
+   R² Score: -0.471
+   Weighted MSE: 0.004052
+   Accuracy: 0.696
+
+=== Overall Metrics ===
+Total Samples: 32834700
+MSE: 0.034774
+R² Score: -0.227
+Weighted MSE: 0.008047
+Accuracy: 0.954

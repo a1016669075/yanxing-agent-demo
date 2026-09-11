@@ -1,0 +1,106 @@
+{
+  "round": "dust-round-025",
+  "event_id": "dust-hexi-corridor-2021-03-15",
+  "source": "NASA POWER hourly point API",
+  "source_url": "https://power.larc.nasa.gov/",
+  "source_note": "Meteorology evidence snapshot for UI evidence chain; not ERA5/MERRA-2 direct raw ingest.",
+  "aoi_bbox": [
+    94,
+    37.4,
+    104.5,
+    42.5
+  ],
+  "date": "2021-03-15",
+  "time_window_utc": "2021-03-15T03:00:00Z/2021-03-15T09:00:00Z",
+  "variables": [
+    "WS10M",
+    "WD10M",
+    "RH2M",
+    "T2M"
+  ],
+  "points": [
+    {
+      "id": "upwind_west",
+      "label": "Upwind west Hexi sample",
+      "lon": 95,
+      "lat": 40.2,
+      "request_url": "https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=WS10M,WD10M,RH2M,T2M&community=AG&longitude=95&latitude=40.2&start=20210315&end=20210315&format=JSON&time-standard=UTC",
+      "window_utc": "2021-03-15T03:00:00Z/2021-03-15T09:00:00Z",
+      "sample_count": 7,
+      "mean_wind_speed_m_s": 10.75,
+      "mean_wind_from_deg": 263.2,
+      "mean_wind_from_cardinal": "W",
+      "inferred_transport_to_deg": 83.2,
+      "inferred_transport_to_cardinal": "E",
+      "mean_relative_humidity_percent": 13.6,
+      "mean_temperature_c": 10.5,
+      "event_hour_values": {
+        "time_utc": "2021-03-15T06:00:00Z",
+        "wind_speed_m_s": 12.4,
+        "wind_from_deg": 262.1,
+        "transport_to_deg": 82.1,
+        "relative_humidity_percent": 14.82,
+        "temperature_c": 11.05
+      }
+    },
+    {
+      "id": "aoi_center",
+      "label": "Hexi Corridor AOI center",
+      "lon": 99.25,
+      "lat": 40,
+      "request_url": "https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=WS10M,WD10M,RH2M,T2M&community=AG&longitude=99.25&latitude=40&start=20210315&end=20210315&format=JSON&time-standard=UTC",
+      "window_utc": "2021-03-15T03:00:00Z/2021-03-15T09:00:00Z",
+      "sample_count": 7,
+      "mean_wind_speed_m_s": 8.8,
+      "mean_wind_from_deg": 61.5,
+      "mean_wind_from_cardinal": "NE",
+      "inferred_transport_to_deg": 241.5,
+      "inferred_transport_to_cardinal": "SW",
+      "mean_relative_humidity_percent": 13,
+      "mean_temperature_c": 11.6,
+      "event_hour_values": {
+        "time_utc": "2021-03-15T06:00:00Z",
+        "wind_speed_m_s": 9.21,
+        "wind_from_deg": 65,
+        "transport_to_deg": 245,
+        "relative_humidity_percent": 11.4,
+        "temperature_c": 12.9
+      }
+    },
+    {
+      "id": "downwind_east",
+      "label": "Downwind east Hexi sample",
+      "lon": 103,
+      "lat": 39.8,
+      "request_url": "https://power.larc.nasa.gov/api/temporal/hourly/point?parameters=WS10M,WD10M,RH2M,T2M&community=AG&longitude=103&latitude=39.8&start=20210315&end=20210315&format=JSON&time-standard=UTC",
+      "window_utc": "2021-03-15T03:00:00Z/2021-03-15T09:00:00Z",
+      "sample_count": 7,
+      "mean_wind_speed_m_s": 11.94,
+      "mean_wind_from_deg": 105.1,
+      "mean_wind_from_cardinal": "E",
+      "inferred_transport_to_deg": 285.1,
+      "inferred_transport_to_cardinal": "W",
+      "mean_relative_humidity_percent": 11.2,
+      "mean_temperature_c": 6.2,
+      "event_hour_values": {
+        "time_utc": "2021-03-15T06:00:00Z",
+        "wind_speed_m_s": 12.13,
+        "wind_from_deg": 104.4,
+        "transport_to_deg": 284.4,
+        "relative_humidity_percent": 10.2,
+        "temperature_c": 7.37
+      }
+    }
+  ],
+  "evidence_summary": {
+    "wind_support": true,
+    "humidity_support": true,
+    "transport_direction": "SW (241.5 deg)",
+    "precursor_signal_summary": "Hexi AOI center mean wind 8.8 m/s from NE; inferred transport SW; mean RH 13%.",
+    "limitations": [
+      "Point samples only, not a gridded ERA5/MERRA-2 field.",
+      "Supports transport plausibility; does not classify dust pixels.",
+      "No vertical wind, boundary-layer height, soil moisture, or source-region emission model included."
+    ]
+  }
+}

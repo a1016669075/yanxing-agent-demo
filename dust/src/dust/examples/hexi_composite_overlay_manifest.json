@@ -1,0 +1,94 @@
+{
+  "round": "dust-round-043",
+  "tool_id": "hexi_multiscale_composite_overlay_adapter",
+  "status": "executed_composite_overlay_export",
+  "current_aoi_inference": "learned_model_inference_from_current_aoi_weak_labels",
+  "actual_model_runs": [
+    "viirs_element84_style_weak_label_model_adapter"
+  ],
+  "event_id": "hexi-corridor-2021-03-15",
+  "assets": [
+    {
+      "scale": "coarse",
+      "path": "src/dust/examples/composites/hexi_coarse_basemap_red_mask_composite_dust-round-043.png",
+      "type": "png",
+      "width": 939,
+      "height": 525,
+      "sensor": "AIRS Aqua Dust Score / MODIS Terra context",
+      "datetime": "2021-03-15T06:00:00Z",
+      "basemap_layer": "AIRS_L2_Dust_Score_Day",
+      "basemap_source": "NASA GIBS rendered basemap",
+      "mask_tool_id": "gibs_rendered_dust_score_threshold_adapter",
+      "active_red_pixels": 34,
+      "mask_area_km2": 28940,
+      "mask_status": "rendered-product threshold, not model inference",
+      "current_aoi_inference": "not_model_inference",
+      "pixel_class": "dust_anomaly",
+      "color": "#ff0000",
+      "opacity": 0.45,
+      "threshold": 0.5,
+      "display_policy": "PPT composite of real basemap plus red display/support mask; not model inference."
+    },
+    {
+      "scale": "medium",
+      "path": "src/dust/examples/composites/hexi_medium_basemap_red_mask_composite_dust-round-043.png",
+      "type": "png",
+      "width": 939,
+      "height": 525,
+      "sensor": "VIIRS NOAA-20 Corrected Reflectance",
+      "datetime": "2021-03-15T06:00:00Z",
+      "basemap_layer": "VIIRS_NOAA20_CorrectedReflectance_TrueColor",
+      "basemap_source": "NASA GIBS rendered basemap",
+      "mask_tool_id": "viirs_multichannel_weak_label_segmentation_adapter",
+      "active_red_pixels": 1161,
+      "mask_area_km2": 55662,
+      "mask_status": "current-AOI VIIRS weak-label learned inference",
+      "current_aoi_inference": "learned_model_inference_from_current_aoi_weak_labels",
+      "pixel_class": "dust_anomaly",
+      "color": "#ff0000",
+      "opacity": 0.45,
+      "threshold": 0.79,
+      "display_policy": "PPT composite of real VIIRS corrected-reflectance basemap plus current-AOI weak-label learned mask; not Element84 public weights."
+    },
+    {
+      "scale": "high",
+      "path": "src/dust/examples/composites/hexi_high_basemap_red_mask_composite_dust-round-043.png",
+      "type": "png",
+      "width": 939,
+      "height": 525,
+      "sensor": "Sentinel-2 L2A AOT + B04/B08 + SCL COG + visual thumbnail",
+      "datetime": "2021-03-15T04:47:36.583Z",
+      "basemap_layer": "S2A_46SEJ_20210315_2_L2A TCI thumbnail",
+      "basemap_source": "Earth Search / Sentinel COG thumbnail",
+      "mask_tool_id": "sentinel2_raw_aot_cog_audit_adapter",
+      "active_red_pixels": 360,
+      "mask_area_km2": 5,
+      "mask_status": "same-day raw Sentinel-2 support, not model inference",
+      "current_aoi_inference": "not_model_inference",
+      "pixel_class": "dust_anomaly",
+      "color": "#ff0000",
+      "opacity": 0.55,
+      "threshold": 777,
+      "display_policy": "PPT composite for source/confounder interpretation only; same-day Sentinel-2 support is not model inference."
+    }
+  ],
+  "evidence": {
+    "main": [
+      "Composite PNG overlays were exported for coarse, medium and high display scales.",
+      "Each composite combines the visible remote-sensing basemap with red pixel-level anomaly/support cells."
+    ],
+    "supporting": [
+      "Coarse and medium composites use real NASA GIBS rendered basemaps.",
+      "The medium composite keeps the current VIIRS corrected-reflectance + weak-label learned mask path."
+    ],
+    "conflicting": [
+      "Composite overlays are screenshot/PPT display assets, not sensor-native raster products.",
+      "The executed medium model is a local weak-label baseline, not Dust-Mamba or Element84 public weights.",
+      "The high-resolution composite uses a same-day Sentinel-2 COG thumbnail and remains supporting-only because no Sentinel-2 dust model ran."
+    ],
+    "precursor": [
+      "Meteorology, aerosol and confounder evidence remain separate evidence-chain inputs, not part of the composite export."
+    ]
+  },
+  "display_policy": "Use these composite PNGs as PPT-ready views of basemap + red pixel-level mask. Label the medium view as weak-label VIIRS inference and keep coarse/high support-only."
+}
