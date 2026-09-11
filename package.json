@@ -1,7 +1,7 @@
 {
-  "name": "yanxing-agent-demo",
+  "name": "yin-agent-demo",
   "private": true,
-  "description": "Shareable web demo for the Yan Xing atmospheric retrieval agent prototype",
+  "description": "Shareable web demo for the Yin atmospheric retrieval agent prototype",
   "scripts": {
     "start": "node server.js",
     "share": "node share.js",
