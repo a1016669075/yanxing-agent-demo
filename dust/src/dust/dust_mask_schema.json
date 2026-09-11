@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "yanxing-agent/dust_mask_schema.json",
+  "$id": "yin-agent/dust_mask_schema.json",
   "title": "Dust mask and evidence output schema",
   "type": "object",
   "required": ["event_id", "tool_id", "sensor", "scale", "datetime", "aoi", "mask", "confidence", "evidence", "provenance"],
