@@ -14,17 +14,6 @@ const hexiCorridorCase = {
 const sentinelThumbnail =
   "./src/dust/examples/high/sentinel2_hexi_high_context_s2a_46sej_20210315_2_l2a.png";
 
-const rivasModelReference = {
-  imageUrl: "./reports/dust-round-005/model-audit/rivas-3dcnn/T2025086.0420.png",
-  checkpoint: "./reports/dust-round-005/model-audit/rivas-3dcnn/big_epoch_3_finished.pth",
-  metricsPath: "./reports/dust-round-005/model-audit/rivas-3dcnn/test_results.txt",
-  sourceUrl: "https://github.com/Rivas-AI/dust-3dcnn",
-  selectedCase: "T2025086.0420",
-  selectedCaseAccuracy: "0.820",
-  overallAccuracy: "0.954",
-  status: "model_ready reference",
-};
-
 const highResolutionAudit = {
   eventDate: "2021-03-15",
   imageryDate: "2021-03-15",
@@ -2407,84 +2396,6 @@ function decisionTracePanel(comparison) {
   `;
 }
 
-function modelReferencePanel(modisAudit, modisInputContract) {
-  const selected = modisAudit?.selected_reference_case || {
-    id: rivasModelReference.selectedCase,
-    accuracy: Number(rivasModelReference.selectedCaseAccuracy),
-    mse: null,
-    r2: null,
-  };
-  const overall = modisAudit?.overall_metrics || {
-    accuracy: Number(rivasModelReference.overallAccuracy),
-    mse: null,
-    r2: null,
-    total_samples: null,
-  };
-  const caseMetrics = modisAudit?.case_metrics || [];
-  const inputStatus = modisInputContract?.status || "input requirements not loaded";
-  const checkpoint = modisInputContract?.local_artifacts?.find((item) => item.path.endsWith(".pth"));
-  const processedRoots = modisInputContract?.processed_roots || [];
-  const requiredBands = modisInputContract?.expected_input_contract?.required_band_arrays?.length || 38;
-  return `
-    <section class="dust-model-reference-panel" data-shot="model-reference">
-      <div class="dust-panel-head">
-        <h2>MODIS 3D-CNN 模型参考</h2>
-        <p>Rivas-AI dust-3dcnn 已有本地 checkpoint 与评估 artifact。本面板只做传感器绑定的模型就绪审计，不代表当前 AOI 推理。</p>
-      </div>
-      <div class="dust-model-reference-grid">
-        <figure class="dust-model-reference-image">
-          <img src="${escapeHtml(rivasModelReference.imageUrl)}" alt="Rivas 3D-CNN prediction reference" />
-          <figcaption>预生成 ${escapeHtml(selected.id)} 预测 / 真值对比；不是当前 AOI。</figcaption>
-        </figure>
-        <div class="dust-model-reference-facts">
-          <span>${escapeHtml(modisAudit?.status || rivasModelReference.status)}</span>
-          <strong>MODIS Terra/Aqua multispectral 3D-CNN</strong>
-          <p>已下载用于审计的 checkpoint：${escapeHtml(rivasModelReference.checkpoint)}</p>
-          <div class="dust-model-metrics-grid">
-            <span>选中样例精度 ${selected.accuracy}</span>
-            <span>整体精度 ${overall.accuracy}</span>
-            <span>整体 MSE ${overall.mse ?? "未知"}</span>
-            <span>案例数 ${caseMetrics.length || "未知"}</span>
-          </div>
-          <p>因 processed .npy 输入仍缺失，未运行本地推理。当前 AOI mask 仍以 VIIRS 中尺度协同 mask 为主。</p>
-          <div class="dust-model-input-contract" data-shot="modis-input-contract">
-            <span>${escapeHtml(inputStatus)}</span>
-            <span>checkpoint ${availableText(checkpoint?.exists)} · ${checkpoint?.bytes?.toLocaleString("en-US") || 0} bytes</span>
-            <span>完整 processed 案例 ${modisInputContract?.complete_cases?.length || 0}</span>
-            <span>输入数组要求 ${requiredBands} 个波段 + x.npy</span>
-          </div>
-          <p>${escapeHtml(modisInputContract?.promotion_decision?.reason || "Input readiness audit is not loaded.")}</p>
-          <div class="dust-model-input-roots">
-            ${processedRoots
-              .map(
-                (item) => `
-                  <span>
-                    <strong>${escapeHtml(item.path)}</strong>
-                     存在=${booleanText(item.exists)} / 完整案例 ${item.complete_case_count}
-                  </span>
-                `
-              )
-              .join("")}
-          </div>
-          <div class="dust-model-case-list" data-shot="modis-model-audit">
-            ${caseMetrics
-              .slice(0, 6)
-              .map(
-                (item) => `
-                  <span>
-                    <strong>${escapeHtml(item.id)}</strong>
-                     精度 ${item.accuracy} / MSE ${item.mse}
-                  </span>
-                `
-              )
-              .join("")}
-          </div>
-        </div>
-      </div>
-    </section>
-  `;
-}
-
 function realDataModelRunPanel(
   realGibsDataRun,
   viirsRawGranuleAudit,
@@ -4062,8 +3973,6 @@ function renderPage({
       viirsLearnedOutput,
       rivasModelOutputImport
     )}
-
-    ${modelReferencePanel(modisAudit, modisInputContract)}
 
     ${meteorologyPanel(meteorology)}
 
