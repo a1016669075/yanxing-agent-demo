@@ -2419,6 +2419,7 @@ function modelReferencePanel(modisAudit, modisInputContract) {
   const caseMetrics = modisAudit?.case_metrics || [];
   const inputStatus = modisInputContract?.status || "input requirements not loaded";
   const checkpoint = modisInputContract?.local_artifacts?.find((item) => item.path.endsWith(".pth"));
+  const processedRoots = modisInputContract?.processed_roots || [];
   const requiredBands = modisInputContract?.expected_input_contract?.required_band_arrays?.length || 38;
   return `
     <section class="dust-model-reference-panel" data-shot="model-reference">
@@ -2448,6 +2449,31 @@ function modelReferencePanel(modisAudit, modisInputContract) {
             <span>输入数组要求 ${requiredBands} 个波段 + x.npy</span>
           </div>
           <p>${escapeHtml(modisInputContract?.promotion_decision?.reason || "Input readiness audit is not loaded.")}</p>
+          <div class="dust-model-input-roots">
+            ${processedRoots
+              .map(
+                (item) => `
+                  <span>
+                    <strong>${escapeHtml(item.path)}</strong>
+                     存在=${booleanText(item.exists)} / 完整案例 ${item.complete_case_count}
+                  </span>
+                `
+              )
+              .join("")}
+          </div>
+          <div class="dust-model-case-list" data-shot="modis-model-audit">
+            ${caseMetrics
+              .slice(0, 6)
+              .map(
+                (item) => `
+                  <span>
+                    <strong>${escapeHtml(item.id)}</strong>
+                     精度 ${item.accuracy} / MSE ${item.mse}
+                  </span>
+                `
+              )
+              .join("")}
+          </div>
         </div>
       </div>
     </section>
